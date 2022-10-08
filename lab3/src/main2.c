@@ -15,7 +15,6 @@ void print(double **matrix, int n)
     }
 }
 
-int cntOfThreadsForMinors = 0;
 double *firstRow;
 typedef struct
 {
@@ -23,6 +22,7 @@ typedef struct
     int n;
     int cols;
     int i;
+    pthread_t *threads;
 } threadArgs;
 
 void clearMinor(double **matrix, int n)
@@ -69,34 +69,31 @@ void *routine(void *args)
 {
     threadArgs *arg = (threadArgs *) args;
     double **matrix = arg->matrix;
+    pthread_t *threads = arg->threads;
     int n = arg->n, i = arg->i, cols = arg->cols;
-    if (cntOfThreadsForMinors == 0) {    
-        for (int j = i; j < i + cols && j < n; j++) {
-            double **mr = malloc(sizeof(double *) * (n - 1));
-            for (int it1 = 0; it1 < n - 1; it1++) {
-                mr[it1] = malloc(sizeof(double) * (n - 1));
-            }
-            for (int it1 = 1; it1 < n; it1++) {
-                for (int it2 = 0; it2 < n; it2++) {
-                    if (it2 == j) {
-                        continue;
-                    } else if (it2 < j) {
-                        mr[it1 - 1][it2] = matrix[it1][it2];
-                    } else {
-                        mr[it1 - 1][it2 - 1] = matrix[it1][it2];
-                    }
+    for (int j = i; j < i + cols && j < n; j++) {
+        double **mr = malloc(sizeof(double *) * (n - 1));
+        for (int it1 = 0; it1 < n - 1; it1++) {
+            mr[it1] = malloc(sizeof(double) * (n - 1));
+        }
+        for (int it1 = 1; it1 < n; it1++) {
+            for (int it2 = 0; it2 < n; it2++) {
+                if (it2 == j) {
+                    continue;
+                } else if (it2 < j) {
+                    mr[it1 - 1][it2] = matrix[it1][it2];
+                } else {
+                    mr[it1 - 1][it2 - 1] = matrix[it1][it2];
                 }
             }
-            printf("\nminor of thread %d:\n", i);
-            print(mr, n - 1);
-            firstRow[j] = getMinor(mr, n - 1);
-            clearMinor(mr, n - 1);
         }
-        free(arg);
-        return NULL;
-    } else {
-        return NULL;
+        // printf("\nminor of thread %d:\n", i);
+        // print(mr, n - 1);
+        firstRow[j] = getMinor(mr, n - 1);
+        clearMinor(mr, n - 1);
     }
+    free(arg);
+    return NULL;
 }
 
 int main(int argc, char const *argv[])
@@ -135,8 +132,8 @@ int main(int argc, char const *argv[])
         }
     }
     if (cntOfThreads > n) {
-        cntOfThreadsForMinors = n - cntOfThreads;
-        cntOfThreads = n;
+        printf("Error: Number_of_threads must be less or eqipual then Square_matrix_dim");
+        exit(1);
     }
     int colsForThread = n / cntOfThreads;
     int colsMod = n % cntOfThreads;
@@ -151,6 +148,7 @@ int main(int argc, char const *argv[])
             args->cols = colsForThread;
         }
         args->i = i;
+        args->threads = threads;
         if (pthread_create(threads + i, NULL, routine, args) != 0) {
             printf("Thread creation error\n");
             exit(1);
