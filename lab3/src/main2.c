@@ -99,8 +99,9 @@ void *routine(void *args)
 int main(int argc, char const *argv[])
 {
     const long CORES = sysconf(_SC_NPROCESSORS_ONLN);
-    if (argc != 3) {
+    if (argc < 3 || argc > 4) {
         printf("Syntax error: expected ./*executable_file_name* Square_matrix_dim Number_of_threads\n");
+        printf("or ./*executable_file_name* Square_matrix_dim Number_of_threads -t\n");
         exit(1);
     }
     int n = atoi(argv[1]), cntOfThreads = atoi(argv[2]);
@@ -125,7 +126,9 @@ int main(int argc, char const *argv[])
     if (matrix == NULL) {
         printf("Allocation error: can't allocate exeptet matrix\n");
     }
-    printf("Enter the square matrix dim of %d:\n", n);
+    if (argc == 3) {
+        printf("Enter the square matrix dim of %d:\n", n);
+    }
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             scanf("%lf", &matrix[i][j]);
@@ -135,9 +138,14 @@ int main(int argc, char const *argv[])
         printf("Error: Number_of_threads must be less or eqipual then Square_matrix_dim");
         exit(1);
     }
+    FILE *timeTest;
+    clock_t begin, end;
+    if (argc == 4) {
+        timeTest = fopen("../benchmark/outp2", "a");
+        begin = clock();
+    }
     int colsForThread = n / cntOfThreads;
     int colsMod = n % cntOfThreads;
-    //printf("%.2lf\n", getMinor(matrix, n));
     for (int i = 0; i < cntOfThreads; i++) {
         threadArgs *args = malloc(sizeof(threadArgs));
         args->matrix = matrix;
@@ -167,7 +175,14 @@ int main(int argc, char const *argv[])
         }
         det += firstRow[i] * matrix[0][i];
     }
-    printf("%.2lf\n", det);
+    if (argc == 3) {
+        printf("%.2lf\n", det);
+    }
+    if (argc == 4) {
+        end = clock();
+        fprintf(timeTest, "%lf\n", (double)(end - begin) / CLOCKS_PER_SEC);
+        fclose(timeTest);
+    }
     clearMinor(matrix, n);
     free(firstRow);
     firstRow = NULL;

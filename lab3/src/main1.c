@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include <unistd.h>
+#include <time.h>
 
 double **matrix = NULL;
 
@@ -69,8 +70,9 @@ double det(double **matrix, int n)
 
 int main(int argc, char const *argv[])
 {
-    if (argc != 3) {
+    if (argc < 3 || argc > 4) {
         printf("Syntax error: expected ./*executable_file_name* Square_matrix_dim Number_of_threads\n");
+        printf("or ./*executable_file_name* Square_matrix_dim Number_of_threads -t\n");
         exit(1);
     }
     int n = atoi(argv[1]), cntOfThreads = atoi(argv[2]);
@@ -90,11 +92,19 @@ int main(int argc, char const *argv[])
     if (matrix == NULL) {
         printf("Allocation error: can't allocate exeptet matrix\n");
     }
-    printf("Enter the square matrix dim of %d:\n", n);
+    if (argc == 3) {
+        printf("Enter the square matrix dim of %d:\n", n);
+    }
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             scanf("%lf", &matrix[i][j]);
         }
+    }
+    FILE *timeTest;
+    clock_t begin, end;
+    if (argc == 4) {
+        timeTest = fopen("../benchmark/outp1", "a");
+        begin = clock();
     }
     int rowsForThread = (n - 1) / cntOfThreads;
     int rowsMod = (n - 1) % cntOfThreads;
@@ -114,7 +124,7 @@ int main(int argc, char const *argv[])
     }
     for (int i = 0; i < cntOfThreads; i++) {
         if (pthread_join(threads[i], NULL) != 0) {
-            printf("Thread join error");
+            printf("Thread join error\n");
             exit(1);
         }
     }
@@ -122,7 +132,14 @@ int main(int argc, char const *argv[])
     for (int i = 0; i < n; i++) {
         res *= matrix[i][i];
     }
-    printf("%.2lf\n", res);
+    if (argc == 3) {
+        printf("%.2lf\n", res);
+    }
+    if (argc == 4) {
+        end = clock();
+        fprintf(timeTest, "%lf\n", (double)(end - begin) / CLOCKS_PER_SEC);
+        fclose(timeTest);
+    }
     clearMinor(matrix, n);
     free(threads);
     threads = NULL;
