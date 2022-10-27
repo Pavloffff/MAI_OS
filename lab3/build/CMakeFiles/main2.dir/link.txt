@@ -1,1 +1,0 @@
-/usr/bin/cc -pthread CMakeFiles/main2.dir/src/main2.c.o -o main2 

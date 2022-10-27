@@ -1,4 +1,0 @@
-/home/ggame/OS/ready/lab3/build/CMakeFiles/main1.dir
-/home/ggame/OS/ready/lab3/build/CMakeFiles/main2.dir
-/home/ggame/OS/ready/lab3/build/CMakeFiles/edit_cache.dir
-/home/ggame/OS/ready/lab3/build/CMakeFiles/rebuild_cache.dir
