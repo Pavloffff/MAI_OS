@@ -15,7 +15,7 @@ int main(int argc, char const *argv[])
     std::string in = myInput();
     int fd = shm_open(backFile.c_str(), O_RDWR | O_CREAT, accessPerm);
     CHECK_ERROR(fd, -1, "shm_open"); 
-    sem_t *semaphore = sem_open(semFile.c_str(), O_CREAT, accessPerm);
+    sem_t *semaphore = sem_open(semFile.c_str(), O_CREAT, accessPerm, 2);
     CHECK_ERROR(semaphore, SEM_FAILED, "sem_open");
     int state = 0, mapSize = in.size() + 1;
     ftruncate(fd, (int) mapSize);
