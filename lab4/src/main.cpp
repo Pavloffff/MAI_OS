@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <semaphore.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -18,12 +19,12 @@ int main(int argc, char const *argv[])
     CHECK_ERROR(semaphore, SEM_FAILED, "sem_open");
     int state = 0, mapSize = in.size() + 1;
     ftruncate(fd, (int) mapSize);
-    char * mapped = (char *) mmap(NULL,
-                                    mapSize,
-                                    PROT_READ | PROT_WRITE,
-                                    MAP_SHARED,
-                                    fd,
-                                    0);
+    char *mapped = (char *) mmap(NULL,
+                                 mapSize,
+                                 PROT_READ | PROT_WRITE,
+                                 MAP_SHARED,
+                                 fd,
+                                 0);
     CHECK_ERROR(mapped, MAP_FAILED, "mmap");
     memset(mapped, '\0', mapSize);
     sprintf(mapped, "%s", in.c_str());
@@ -33,7 +34,7 @@ int main(int argc, char const *argv[])
         sem_post(semaphore);
     }
     while (state-- > 3) {
-        sem_post(semaphore);
+        sem_wait(semaphore);
     }
     pid_t child1Id = fork();
     CHECK_ERROR(child1Id, -1, "fork");

@@ -3,8 +3,8 @@
 
 #include <string>
 
-std::string backFile = "os_lab4.back";
-std::string semFile = "os_lab4.semaphore";
+std::string backFile = "main.back";
+std::string semFile = "main.semaphore";
 int accessPerm = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH;
 
 #define CHECK_ERROR(expr, err, message) \
