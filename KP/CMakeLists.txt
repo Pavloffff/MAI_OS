@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+project(client LANGUAGES C)
+add_executable(kptools ./include/kptools.c ./include/kptools.h)
+add_executable(intvector ./include/intvector.c ./include/intvector.h)
+add_executable(playervector ./include/playervector.c ./include/intvector.h ./include/playervector.h ./include/kptools.h)
+add_executable(sessionvector ./include/sessionvector.c ./include/playervector.h ./include/sessionvector.h ./include/kptools.h)
+add_executable(client ./src/client.c ./include/kptools.h ./include/kptools.h ./include/intvector.h ./include/playervector.h ./include/sessionvector.h)
+add_executable(server ./src/server.c ./include/kptools.h ./include/kptools.h ./include/intvector.h ./include/playervector.h ./include/sessionvector.h)

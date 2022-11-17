@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/intvector.dir/include/intvector.c.o -o intvector 
