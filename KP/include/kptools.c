@@ -9,6 +9,9 @@ char *getString()
     char *_str = (char *) calloc(1, sizeof(char));
     char c;
     while ((c = getchar()) != EOF) {
+        if (c == '\n') {
+            break;
+        }
         _str[sz] = c;
         _str = (char *) realloc(_str, (++sz + 1) * sizeof(char));
     }

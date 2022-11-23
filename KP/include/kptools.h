@@ -1,8 +1,6 @@
 #ifndef __KPTOOLS_H__
 #define __KPTOOLS_H__
 
-#include "intvector.h"
-
 #define CHECK_ERROR(expr, err, message) \
     do { \
         auto __result = (expr); \

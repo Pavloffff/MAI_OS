@@ -8,9 +8,9 @@
 
 typedef struct 
 {
-    char *name;
-    intVector *bulls;
-    intVector *cows;
+    int num;
+    int bulls;
+    int cows;
     unsigned int answer;
 } Player;
 
@@ -29,5 +29,6 @@ void pvDestroy(playerVector *v);
 void pvPush(playerVector *v, Player value);
 Player pvPop(playerVector *v);
 void playerPrint(Player p);
+void pvPrint(playerVector *v);
 
 #endif

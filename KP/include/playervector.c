@@ -37,7 +37,7 @@ void pvDestroy(playerVector *v)
 
 void pvPush(playerVector *v, Player value)
 {
-	if (vIsFull(v)) {
+	if (pvIsFull(v)) {
 		v->capasity *= 2;
 		v->begin = realloc(v->begin, v->capasity * sizeof(Player));
 	}
@@ -54,11 +54,9 @@ Player pvPop(playerVector *v)
 
 void playerPrint(Player p)
 {
-    printf("Name: %d\n", p.name);
-    printf("Bulls:\n");
-    vPrint(p.bulls);
-    printf("Cows:\n");
-    vPrint(p.cows);
+    printf("num: %d\n", p.num);
+    printf("Bulls: %d\n", p.bulls);
+    printf("Cows: %d\n", p.cows);
     printf("Last answer: %d\n", p.answer);
 }
 

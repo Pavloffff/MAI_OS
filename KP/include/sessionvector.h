@@ -4,14 +4,16 @@
 #include <string.h>
 #include "kptools.h"
 #include <stdbool.h>
+#include "playervector.h"
 
 typedef struct
 {
     char *sessionName;
+    int _sz;
     unsigned int cntOfPlayers;
     int currentPlayerIndex;
     playerVector *playersList;
-    unsigned int hiddenNum;
+    int hiddenNum;
 } Session;
 
 typedef struct

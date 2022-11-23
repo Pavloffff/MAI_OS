@@ -30,5 +30,7 @@ server:
 	Создать несколько объектов общей памяти для каждой сессии
 	
 #TODO
-	1. MergeSort
-	2. Cmake
+    1. ctrl d 
+	2. MergeSort
+    3. threading
+    

@@ -37,7 +37,7 @@ void svDestroy(sessionVector *v)
 
 void svPush(sessionVector *v, Session value)
 {
-	if (vIsFull(v)) {
+	if (svIsFull(v)) {
 		v->capasity *= 2;
 		v->begin = realloc(v->begin, v->capasity * sizeof(Session));
 	}
@@ -55,8 +55,10 @@ Session svPop(sessionVector *v)
 void sessionPrint(Session s)
 {
     printf("Name of session: %s\n", s.sessionName);
+    printf("sz: %d\n", s._sz);
     printf("Count of players: %d\n", s.cntOfPlayers);
-    printf("Turn of player: %s\n", s.currentPlayerIndex);
+    printf("Turn of player: %d\n", s.currentPlayerIndex);
     printf("Players:\n");
     pvPrint(s.playersList);
+    printf("hidden Number: %d\n", s.hiddenNum);
 }
