@@ -1,1 +1,0 @@
-/usr/bin/c++ -pthread CMakeFiles/child2.dir/src/child2.cpp.o -o child2 

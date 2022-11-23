@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/sessionvector.dir/include/sessionvector.c.o -o sessionvector 

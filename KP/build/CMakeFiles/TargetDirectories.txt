@@ -1,8 +1,0 @@
-/home/ggame/OS/KP/build/CMakeFiles/kptools.dir
-/home/ggame/OS/KP/build/CMakeFiles/intvector.dir
-/home/ggame/OS/KP/build/CMakeFiles/playervector.dir
-/home/ggame/OS/KP/build/CMakeFiles/sessionvector.dir
-/home/ggame/OS/KP/build/CMakeFiles/client.dir
-/home/ggame/OS/KP/build/CMakeFiles/server.dir
-/home/ggame/OS/KP/build/CMakeFiles/edit_cache.dir
-/home/ggame/OS/KP/build/CMakeFiles/rebuild_cache.dir
