@@ -10,13 +10,14 @@
 #include <time.h>
 #include "kptools.h"
 #include "intvector.h"
-#include "sessionvector.h"
+#include "sessionmap.h"
 #include "playervector.h"
 
 void createSession(Player *player, char *sessionName, int cntOfPlayers)
 {
     int bulls = 0;
     int cows = 0;
+    player->num = 1;
     player->bulls = bulls;
     player->cows = cows;
     player->answer = 0;
@@ -38,24 +39,14 @@ void createSession(Player *player, char *sessionName, int cntOfPlayers)
     int mainSz = sizeof(Session);
     mainSz += session._sz;
     mainSz += sizeof(playerVector);
-    mainSz += session.playersList->capasity * (sizeof(Player)); 
-    // printf("%d\n", mainSz);
+    mainSz += session.playersList->capasity * (sizeof(Player));
     ftruncate(mainFd, mainSz);
-    char *mapped = (char *) mmap(NULL,
-                                 mainSz,
-                                 PROT_READ | PROT_WRITE,
-                                 MAP_SHARED,
-                                 mainFd,
-                                 0);
+    char *mapped = (char *) mmap(NULL, mainSz, PROT_READ | PROT_WRITE, MAP_SHARED, mainFd, 0);
     memcpy(mapped, &session, sizeof(Session));
     memcpy(mapped + sizeof(Session), session.sessionName, session._sz);
     memcpy(mapped + sizeof(Session) + session._sz, session.playersList, sizeof(playerVector));
     memcpy(mapped + sizeof(Session) + session._sz + sizeof(playerVector), 
            session.playersList->begin, session.playersList->capasity * (sizeof(Player)));
-    // for (int i = 0; i <= mainSz; i++) {
-    //     printf("%d ", mapped[i]);
-    // }
-    // printf("\n");
     int state = 0;
     sem_getvalue(mainSem, &state);
     while (state++ < 1) {
@@ -65,15 +56,19 @@ void createSession(Player *player, char *sessionName, int cntOfPlayers)
         sem_wait(mainSem);
     }
     printf("Session created\n");
+    free(player);
+    pvDestroy(&players);
     munmap(mapped, mainSz);
     close(mainFd);
     sem_close(mainSem);
 }
 
+
+
 int main(int argc, char const *argv[])
 {
-    Player *player;
-    player->num = 1;
+    intVector v;
+    Player *player = malloc(sizeof(Player));
     char *command;
     int flag = 1;
     while (flag) {
@@ -108,11 +103,14 @@ int main(int argc, char const *argv[])
         }
     }
     
-    // intVector v; 
     // vCreate(&v);
-    // vPush(&v, 5);
-    // vPush(&v, 2048);
-    // vPush(&v, -11);
+    // vPush(&v, 190);
+    // vPush(&v, 11);
+    // vPush(&v, 10);
+    // vPush(&v, 19);
+    // vPush(&v, 1);
+    // vPush(&v, 1909);
+    // vSort(&v);
     // vPrint(&v);
     // vDestroy(&v);
     return 0;

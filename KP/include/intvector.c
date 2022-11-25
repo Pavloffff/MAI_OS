@@ -57,3 +57,43 @@ void vPrint(intVector *v)
     }
     printf("\n");
 }
+
+void merge(intVector *v1, intVector *v2, int l, int r, int mid)
+{
+    int cnt = l, i = l, j = mid + 1;
+    while (i <= mid && j <= r) {
+        if (v1->begin[i] <= v2->begin[j]) {
+            v2->begin[cnt++] = v1->begin[i++];
+        } else {
+            v2->begin[cnt++] = v1->begin[j++];
+        }
+    }
+    while (i <= mid) {
+        v2->begin[cnt++] = v1->begin[i++];
+    }
+    for (int i = 0; i <= r; i++) {
+        v1->begin[i] = v2->begin[i];
+    }
+}
+
+void vSortTmp(intVector *v1, intVector *v2, int l, int r)
+{
+    if (l == r) {
+        return;
+    }
+    int mid = (l + r) / 2;
+    vSortTmp(v1, v2, l, mid);
+    vSortTmp(v1, v2, mid + 1, r);
+    merge(v1, v2, l, r, mid);
+}
+
+void vSort(intVector *v)
+{
+    intVector v2;
+    vCreate(&v2);
+    for (int i = 0; i < vSize(v); i++) {
+        vPush(&v2, v->begin[i]);
+    }
+    vSortTmp(v, &v2, 0, vSize(v) - 1);
+    vDestroy(&v2);
+}

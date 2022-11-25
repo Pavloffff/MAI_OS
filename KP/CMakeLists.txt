@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(client LANGUAGES C)
-add_library(help_lib OBJECT ./include/kptools.c ./include/intvector.c ./include/playervector.c ./include/sessionvector.c)
+set(CMAKE_C_FLAGS "-pthread -fsanitize=address -g")
+add_library(help_lib OBJECT ./include/kptools.c ./include/intvector.c ./include/playervector.c ./include/sessionmap.c)
 add_executable(client ./src/client.c)
 add_executable(server ./src/server.c)
 target_include_directories(client PRIVATE ./include)

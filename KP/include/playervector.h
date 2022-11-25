@@ -30,5 +30,6 @@ void pvPush(playerVector *v, Player value);
 Player pvPop(playerVector *v);
 void playerPrint(Player p);
 void pvPrint(playerVector *v);
+void pvSort(playerVector *v);
 
 #endif

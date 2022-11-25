@@ -20,5 +20,6 @@ void vDestroy(intVector *v);
 void vPush(intVector *v, int value);
 int vPop(intVector *v);
 void vPrint(intVector *v);
+void vSort(intVector *v);
 
 #endif
