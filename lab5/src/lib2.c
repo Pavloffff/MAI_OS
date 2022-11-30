@@ -1,12 +1,39 @@
 #include <stdio.h>
-#include <math.h>
+
+const float PI = 3.1415926;
+
+float Cos(float x)
+{
+    int y = 100;
+    int div = (int) (x / PI);
+    x = x - (div * PI);
+    char sign = 1;
+    if (div % 2 != 0) {
+        sign = -1;
+    }
+    float result = 1.0;
+    float inter = 1.0;
+    float num = x * x;
+    for (int i = 1; i <= y; i++) {
+        float comp = 2.0 * i;
+        float den = comp * (comp - 1.0);
+        inter *= num / den;
+        if (i % 2 == 0) {
+            result += inter;
+        } else {
+            result -= inter;
+        }
+    }
+    return sign * result;
+}
 
 float Derivative(float A, float deltaX)
 {
     printf("\nCalculation of derivative function f(x) = cos(x)\n");
     printf("in point %f with approximation %f\n", A, deltaX);
     printf("by formula f'(x) = (f(A + deltaX) – f(A-deltaX))/(2*deltaX)\n");
-    float dfdx = (cos(A + deltaX) - cos(A - deltaX)) / (2 * deltaX);
+    printf("cos(A) = %f\n", Cos(A));
+    float dfdx = (Cos(A + deltaX) - Cos(A - deltaX)) / (2 * deltaX);
     return dfdx;
 }
 
@@ -55,7 +82,8 @@ float E(int x)
     float e = 0;
     for (int n = 0; n <= x; n++) {
         float tmp = ((float) 1 / fact(n));
-        if (fabs(tmp) <= machineEpsilon()) {
+        float ftmp = tmp > 0 ? tmp : (float) (-1) * tmp;
+        if (ftmp <= machineEpsilon()) {
             printf("Approximation can not work because of mashine Epsilon of float is %.8f\n", machineEpsilon());
             break;
         }

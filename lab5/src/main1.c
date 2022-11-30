@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "lib1.h"
+#include "lib.h"
 
 int main(int argc, char const *argv[])
 {
