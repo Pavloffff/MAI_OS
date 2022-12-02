@@ -10,165 +10,171 @@ int sessionCmp(Session *s1, Session *s2)
     return strcmp(s1->sessionName, s2->sessionName);
 }
 
-int height(sessionMap *iter)
-{
-    if (iter == NULL) {
-        return 0;
-    }
-    return iter->height;
-}
-
 int max(int x, int y)
 {
-    return (x > y) ? x : y;
+    return x > y ? x : y;
 }
 
-sessionMap *sMapFind(sessionMap *iter, Session *key)
+int getHeight(sessionMap *it)
 {
-    if (iter == NULL) {
-        return NULL;
-    } else if (sessionCmp(key, iter->key) == -1) {
-        return sMapFind(iter->left, key);
-    } else if (sessionCmp(key, iter->key) == 1) {
-        return sMapFind(iter->right, key);
-    } else {
-        return iter;
-    }
-}
-
-sessionMap *rightRotate(sessionMap *iter)
-{
-    sessionMap *it1 = iter->left;
-    sessionMap *it2 = iter->right;
-    it1->right = iter;
-    iter->left = it2;
-    iter->height = max(height(iter->left), height(iter->right)) + 1;
-    it1->height = max(height(it1->left), height(it1->right)) + 1;
-    return it1;
-}
-
-sessionMap *leftRotate(sessionMap *iter)
-{
-    sessionMap *it1 = iter->right;
-    sessionMap *it2 = it1->left;
-    it1->left = iter;
-    iter->right = it2;
-    iter->height = max(height(iter->left), height(iter->right)) + 1;
-    it1->height = max(height(it1->left), height(it1->right)) + 1;
-    return it1;
-}
-
-int getBalance(sessionMap *iter)
-{
-    if (iter == NULL) {
+    if (it == NULL) {
         return 0;
     }
-    return height(iter->left) - height(iter->right);
+    return it->height;
 }
 
-sessionMap *sMapInsert(sessionMap *iter, Session *key)
+void setHeight(sessionMap *it)
 {
-    if (iter == NULL) {
+    int hl = getHeight(it->left);
+    int hr = getHeight(it->right);
+    if (hl > hr) {
+        it->height = hl + 1;
+    } else {
+        it->height = hr + 1;
+    }
+}
+
+
+int balanceFactor(sessionMap *it)
+{
+    return getHeight(it->right) - getHeight(it->left);
+}
+
+sessionMap *rotateLeft(sessionMap *it)
+{
+    sessionMap *it1 = it->right;
+    it->right = it1->left;
+    it1->left = it;
+    setHeight(it1);
+    setHeight(it);
+    return it1;
+}
+
+sessionMap *rotateRight(sessionMap *it)
+{
+    sessionMap *it1 = it->left;
+    it->left = it1->right;
+    it1->right = it;
+    setHeight(it1);
+    setHeight(it);
+    return it1;
+}
+
+sessionMap *balance(sessionMap *it)
+{
+    setHeight(it);
+    if (balanceFactor(it) == 2) {
+        if (balanceFactor(it->right) < 0) {
+            it->right = rotateRight(it->right);
+        }
+        it = rotateLeft(it);
+    } else if (balanceFactor(it) == -2) {
+        if (balanceFactor(it->left) > 0) {
+            it->left = rotateLeft(it->left);
+        }
+        it = rotateRight(it);
+    }
+    return it;
+}
+
+sessionMap *sMapInsert(sessionMap *it, Session *key)
+{
+    if (it == NULL) {
         sessionMap *tmp = malloc(sizeof(sessionMap));
         tmp->key = key;
         tmp->height = 1;
         tmp->left = NULL;
         tmp->right = NULL;
         return tmp;
-    } else if (sessionCmp(key, iter->key) == -1) {
-        iter->left = sMapInsert(iter->left, key);
-    } else if (sessionCmp(key, iter->key) == 1) {
-        iter->right = sMapInsert(iter->right, key);
     } else {
-        iter->key = key;
-        return iter;
+        if (sessionCmp(it->key, key) == 0) {
+        } else if (sessionCmp(it->key, key) > 0) {
+            it->left = sMapInsert(it->left, key);
+        } else {
+            it->right = sMapInsert(it->right, key);
+        }
+        it = balance(it);
     }
-    iter->height = 1 + max(height(iter->left), height(iter->right));
-    int balance = getBalance(iter);
-    if (balance > 1 && sessionCmp(key, iter->left->key) == -1) {
-        return rightRotate(iter);
-    }
-    if (balance < -1 && sessionCmp(key, iter->right->key) == 1) {
-        return leftRotate(iter);
-    }
-    if (balance > 1 && sessionCmp(key, iter->left->key) == 1) {
-        iter->left = leftRotate(iter->left);
-        return rightRotate(iter);
-    }
-    if (balance < 1 && sessionCmp(key, iter->left->key) == -1) {
-        iter->right = rightRotate(iter->right);
-        return leftRotate(iter);
-    }
-    iter->key = key;
-    return iter;
+    return it;
 }
 
-sessionMap *minElem(sessionMap *iter)
+sessionMap *minimalsessionMap(sessionMap *it)
 {
-    if (iter->left == NULL) {
-        return iter;
+    while (it->left != NULL) {
+        it = it->left;
     }
-    return minElem(iter->left);
+    return it;
 }
 
-// удаляются ТОЛЬКО ссылки, можно потом дописать и удаление памяти Session, а можно это сделать не тут
-sessionMap *sMapRemove(sessionMap *iter, Session *key)
+sessionMap *sMapDeleteMinimalsessionMap(sessionMap *it)
 {
-    if (iter == NULL) {
-        return iter;
+    if (it->left == NULL) {
+        return it->right;
     }
-    if (sessionCmp(key, iter->key) == -1) {
-        iter->left = sMapRemove(iter->left, key);
-    } else if (sessionCmp(key, iter->key) == 1) {
-        iter->right = sMapRemove(iter->right, key);
-    } else if (iter->left != NULL && iter->right != NULL) {
-        iter->key = minElem(iter->right)->key;
-        iter->right = sMapRemove(iter->right, iter->key);
-    } else if (iter->left != NULL) {
-        sessionMap *leftUndertree = iter->left;
-        free(iter);
-        iter = leftUndertree;
-    } else if (iter->right != NULL) {
-        sessionMap *rightUndertree = iter->right;
-        free(iter);
-        iter = rightUndertree;
+    it->left = sMapDeleteMinimalsessionMap(it->left);
+    return balance(it);
+}
+
+sessionMap *sMapDelete(sessionMap *it, Session *key)
+{
+    if (it == NULL) {
     } else {
-        free(iter);
-        iter = NULL;
+        if (sessionCmp(it->key, key) > 0) {
+            it->left = sMapDelete(it->left, key);
+        } else if (sessionCmp(it->key, key) < 0) {
+            it->right = sMapDelete(it->right, key);
+        } else {
+            sessionMap *l = it->left;
+            sessionMap *r = it->right;
+            free(it);
+            it = NULL;
+            if (r == NULL) {
+                return r;
+            }
+            sessionMap *min = minimalsessionMap(r);
+            min->right = sMapDeleteMinimalsessionMap(r);
+            min->left = l;
+            return balance(min);
+        }
     }
-    return iter;
+    return balance(it);
 }
 
-void sMapPrint(sessionMap *iter, int depthValue)
+int Find(sessionMap *it, Session *key)
 {
-    if (iter != NULL) {
-        for (int i = 0; i < depthValue; ++i) {
-			printf("\t\t");
-		}
-        sessionPrint(*iter->key);
-        printf("\t\t\n");
-        sMapPrint(iter->left, depthValue + 1);
-        sMapPrint(iter->right, depthValue + 1);
+    if (it == NULL) {
+        return 0;
+    } else {
+        if (sessionCmp(it->key, key) > 0) {
+            if (!Find(it->left, key)) {
+                return 0;
+            }
+        } else if (sessionCmp(it->key, key) < 0) {
+            if (!Find(it->right, key)) {
+                return 0;
+            }
+        } else {
+            return 1;
+        }
     }
+    return 1;
 }
 
-sessionMap *sMapDestroy(sessionMap *iter)
+sessionMap *sMapDestroy(sessionMap *it)
 {
-    if (iter == NULL) {
-        return iter;
-    }
-    if (iter->left == NULL && iter->right == NULL) {
-        free(iter);
-        return NULL;
-    }
-    if (iter->left != NULL) {
-        iter->left = sMapDestroy(iter->left);
-    }
-    if (iter->right != NULL) {
-        iter->right = sMapDestroy(iter->right);
-    }
-    return sMapDestroy(iter);
+	if (it == NULL)
+		return it;
+	if (it->left == NULL && it->right == NULL) {
+		free(it);
+		return NULL;
+	}
+	if (it->left != NULL)
+		it->left = sMapDestroy(it->left);
+	if (it->right != NULL)
+		it->right = sMapDestroy(it->right);
+	return sMapDestroy(it);
 }
+
 
 void sessionPrint(Session s)
 {
@@ -179,4 +185,16 @@ void sessionPrint(Session s)
     printf("Players:\n");
     pvPrint(s.playersList);
     printf("hidden Number: %d\n", s.hiddenNum);
+}
+
+void sMapPrint(sessionMap *it, int depth)
+{
+    if (it != NULL) {
+        for (int i = 0; i < depth; ++i) {
+            printf("\t");
+        }
+        printf("%s", it->key->sessionName); printf("\n");
+        sMapPrint(it->left,  depth + 1);
+        sMapPrint(it->right, depth + 1);
+    }
 }

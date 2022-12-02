@@ -36,7 +36,7 @@ void createSession(Player *player, char *sessionName, int cntOfPlayers)
     sessionPrint(session);
     int mainFd = shm_open("main.back", O_RDWR | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
     sem_t *mainSem = sem_open("main.semaphore", O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH, 0);
-    int mainSz = sizeof(Session);
+    int mainSz = sizeof(Session);   
     mainSz += session._sz;
     mainSz += sizeof(playerVector);
     mainSz += session.playersList->capasity * (sizeof(Player));
@@ -63,7 +63,14 @@ void createSession(Player *player, char *sessionName, int cntOfPlayers)
     sem_close(mainSem);
 }
 
+void joinSession(Player *player, char *sessionName)
+{
+    player->num = -1;
+    player->bulls = bulls;
+    player->cows = cows;
+    player->answer = 0;
 
+}
 
 int main(int argc, char const *argv[])
 {
@@ -86,7 +93,9 @@ int main(int argc, char const *argv[])
             free(command);
             flag = 0;
         } else if (strcmp(command, "Join") == 0) {
-            printf("session joined\n");
+            printf("Input name of session which you want to join\n");
+            char *sessionName = getString();
+            joinSession(player, sessionName);
             free(command);
             flag = 0;
         } else if (strcmp(command, "Find") == 0) {
@@ -102,16 +111,5 @@ int main(int argc, char const *argv[])
             flag = 0;
         }
     }
-    
-    // vCreate(&v);
-    // vPush(&v, 190);
-    // vPush(&v, 11);
-    // vPush(&v, 10);
-    // vPush(&v, 19);
-    // vPush(&v, 1);
-    // vPush(&v, 1909);
-    // vSort(&v);
-    // vPrint(&v);
-    // vDestroy(&v);
     return 0;
 }

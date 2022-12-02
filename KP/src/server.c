@@ -17,7 +17,7 @@ sessionMap *sessions;
 
 void *sessionRoutine()
 {
-
+    
 }
 
 void *creationRoutine()
@@ -48,9 +48,11 @@ void *creationRoutine()
             session->playersList->begin = malloc(session->playersList->capasity * sizeof(Player));
             memcpy(session->playersList->begin, mapped + sizeof(Session) + session->_sz + sizeof(playerVector), 
                    session->playersList->capasity * sizeof(Player));
-            sMapInsert(sessions, session);
-            //sessionPrint(*session);
+            // sessionPrint(*session);
+            sessions = sMapInsert(sessions, session);
             sMapPrint(sessions, 0);
+            pthread_t *sessionThread = (pthread_t *) calloc(1, sizeof(pthread_t));
+            pthread_create(sessionThread, NULL, sessionRoutine, NULL);
             munmap(mapped, mapSize);
             close(mainFd);
             sem_post(mainSem);
@@ -75,7 +77,6 @@ int main(int argc, char const *argv[])
     pthread_t *mainThread = (pthread_t *) calloc(1, sizeof(pthread_t));
     pthread_create(mainThread, NULL, creationRoutine, NULL);
     pthread_join(*mainThread, NULL);
-    sMapDestroy(sessions);
     free(mainThread);
     return 0;
 }

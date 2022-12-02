@@ -24,11 +24,11 @@ typedef struct sessionMap
     struct sessionMap *right;
 } sessionMap;
 
-sessionMap *sMapFind(sessionMap *iter, Session *key);
-sessionMap *sMapInsert(sessionMap *iter, Session *key);
-sessionMap *sMapRemove(sessionMap *iter, Session *key);
-void sMapPrint(sessionMap *iter, int depthValue);
-sessionMap *sMapDestroy(sessionMap *iter);
+Session *sMapFind(sessionMap *it, Session *key);
+sessionMap *sMapInsert(sessionMap *it, Session *key);
+sessionMap *sMapDelete(sessionMap *it, Session *key);
+void sMapPrint(sessionMap *it, int depth);
+sessionMap *sMapDestroy(sessionMap *it);
 void sessionPrint(Session s);
 
 #endif
