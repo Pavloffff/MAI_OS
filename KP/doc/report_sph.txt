@@ -30,7 +30,5 @@ server:
 	Создать несколько объектов общей памяти для каждой сессии
 	
 #TODO
-    1. ctrl d 
-	2. MergeSort
-    3. threading
+    1. dfs in sessionMap
     

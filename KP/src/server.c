@@ -64,7 +64,46 @@ void *creationRoutine()
 
 void *joinRoutine()
 {
-
+    sem_t *joinSem = sem_open("join.semaphore", O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH, 0);
+    int state;
+    sem_getvalue(joinSem, &state);
+    while (state++ < 0) {
+        sem_post(joinSem);
+    }
+    while (state-- > 1) {
+        sem_wait(joinSem);
+    }
+    while (1) {
+        sem_getvalue(joinSem, &state);
+        if (state == 1) {
+            int joinFd = shm_open("join.back", O_RDWR | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+            struct stat statBuf;
+            fstat(joinFd, &statBuf);
+            int mapSize = statBuf.st_size;
+            char *mapped = (char *)mmap(NULL, mapSize + 1, PROT_READ | PROT_WRITE, MAP_SHARED, joinFd, 0);
+            Player *player = (Player *) malloc(sizeof(Player));
+            memcpy(player, mapped, sizeof(Player));
+            char *sessionName = (char *) malloc(statBuf.st_size + 1 - sizeof(Player));
+            memcpy(sessionName, mapped + sizeof(Player), statBuf.st_size + 1 - sizeof(Player));
+            printf("%s\n", sessionName);
+            Session *tmp = malloc(sizeof(Session));
+            tmp->sessionName = sessionName;
+            Session *session = sMapFind(sessions, tmp);
+            if (session != NULL) {
+                player->num = pvSize(session->playersList) + 1;
+                pvPush(session->playersList, *player);
+                sessionPrint(*session);
+            } else {
+                printf("Can't join session\n");
+            }
+            free(tmp);
+            munmap(mapped, mapSize);
+            close(joinFd);
+            sem_post(joinSem);
+            continue;
+        }
+    }
+    sem_close(joinSem);
 }
 
 void *findRoutine()
@@ -75,8 +114,12 @@ void *findRoutine()
 int main(int argc, char const *argv[])
 {
     pthread_t *mainThread = (pthread_t *) calloc(1, sizeof(pthread_t));
+    pthread_t *joinThread = (pthread_t *) calloc(1, sizeof(pthread_t));
     pthread_create(mainThread, NULL, creationRoutine, NULL);
+    pthread_create(joinThread, NULL, joinRoutine, NULL);
+    pthread_join(*joinThread, NULL);
     pthread_join(*mainThread, NULL);
+    free(joinThread);
     free(mainThread);
     return 0;
 }

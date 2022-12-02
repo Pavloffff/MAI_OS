@@ -57,6 +57,7 @@ void createSession(Player *player, char *sessionName, int cntOfPlayers)
     }
     printf("Session created\n");
     free(player);
+    free(sessionName);
     pvDestroy(&players);
     munmap(mapped, mainSz);
     close(mainFd);
@@ -66,10 +67,33 @@ void createSession(Player *player, char *sessionName, int cntOfPlayers)
 void joinSession(Player *player, char *sessionName)
 {
     player->num = -1;
-    player->bulls = bulls;
-    player->cows = cows;
+    player->bulls = 0;
+    player->cows = 0;
     player->answer = 0;
-
+    int joinFd = shm_open("join.back", O_RDWR | O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+    sem_t *joinSem = sem_open("join.semaphore", O_CREAT, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH, 0);
+    int joinSz = sizeof(Player);
+    printf("%ld\n", strlen(sessionName));
+    joinSz += strlen(sessionName);
+    ftruncate(joinFd, joinSz);
+    char *mapped = (char *) mmap(NULL, joinSz,  PROT_READ | PROT_WRITE, MAP_SHARED, joinFd, 0);
+    memcpy(mapped, player, sizeof(Player));
+    memcpy(mapped + sizeof(Player), sessionName, strlen(sessionName));
+    int state = 0;
+    sem_getvalue(joinSem, &state);
+    while (state++ < 1) {
+        sem_post(joinSem);
+    }
+    while (state-- > 2) {
+        sem_wait(joinSem);
+    }
+    sem_getvalue(joinSem, &state);
+    printf("Session joined %d\n", state);
+    free(player);
+    free(sessionName);
+    munmap(mapped, joinSz);
+    close(joinFd);
+    sem_close(joinSem);
 }
 
 int main(int argc, char const *argv[])

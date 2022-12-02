@@ -140,24 +140,24 @@ sessionMap *sMapDelete(sessionMap *it, Session *key)
     return balance(it);
 }
 
-int Find(sessionMap *it, Session *key)
+Session *sMapFind(sessionMap *it, Session *key)
 {
     if (it == NULL) {
-        return 0;
+        return NULL;
     } else {
         if (sessionCmp(it->key, key) > 0) {
-            if (!Find(it->left, key)) {
-                return 0;
+            if (!sMapFind(it->left, key)) {
+                return NULL;
             }
         } else if (sessionCmp(it->key, key) < 0) {
-            if (!Find(it->right, key)) {
-                return 0;
+            if (!sMapFind(it->right, key)) {
+                return NULL;
             }
         } else {
-            return 1;
+            return it->key;
         }
     }
-    return 1;
+    return it->key;
 }
 
 sessionMap *sMapDestroy(sessionMap *it)
