@@ -17,7 +17,7 @@ int main(int argc, char const *argv[])
     printf("\nCurrent lib is %d\n\n", link);
     float (*Derivative)(float A, float deltaX);
     float (*E)(int x);
-    Derivative = (currentLib, "Derivative");
+    Derivative = dlsym(currentLib, "Derivative");
     E = dlsym(currentLib, "E");
     while (scanf("%d", &command) != EOF) {
         switch (command) {
