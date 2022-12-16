@@ -18,8 +18,8 @@
         } \
     } while (0)
 
-const int WAIT_TIME = 10000;
-const int PORT = 8000;
+const int WAIT_TIME = 1000;
+const int PORT = 9000;
 
 class NTree
 {
@@ -28,7 +28,8 @@ public:
     Node node;
     NTree();
     void print();
-    int find(int parent, int child);
+    int dfs(int child, int curChild);
+    int find(int child);
     int insert(int parent, int child);
     int erase(int parent, int child);
     ~NTree();
@@ -55,16 +56,33 @@ void NTree::print()
     }
 }
 
-int NTree::find(int parent, int child)
-{
-    auto curParent = this->node.find(parent);
-    if (curParent != this->node.cend()) {
-        auto curChild = curParent->second.find(child);
-        if (curChild != curParent->second.cend()) {
+int NTree::dfs(int child, int curChild) {
+    for (auto i: this->node[curChild]) {
+        // std::cout << i << "\n";
+        if (i == child) {
             return 1;
-        } else {
-            return 0;
         }
+        return NTree::dfs(child, i);
+    }
+    return -1;
+}
+
+int NTree::find(int child)
+{
+    // auto curParent = this->node.find(parent);
+    // if (curParent != this->node.cend()) {
+    //     
+    // }
+    int ans = 0;
+    for (auto curChild: this->node[-1]) {
+        // std::cout << curChild << "\n";
+        if (curChild == child) {
+            return ans;
+        } else if (dfs(child, curChild) != -1) {
+            // std::cout << dfs(child, curChild) << "\n";
+            return ans;
+        }
+        ans++;
     }
     return -1;
 }
@@ -120,10 +138,16 @@ namespace advancedZMQ
         zmq_msg_init(&msg2);
         zmq_msg_recv(&msg2, socket, 0);
         strToJson.assign(static_cast<char *>(zmq_msg_data(&msg2)), zmq_msg_size(&msg2));
-        reply = nlohmann::json::parse(strToJson);
+        if (!strToJson.empty()) {
+            reply = nlohmann::json::parse(strToJson);
+        } else {
+            reply["ans"] = "error";
+        }
         if (debug) {
             std::cout << reply << "\n";
         }
+        zmq_msg_close(&msg);
+        free(arg);
         return reply;
     }
 
@@ -136,6 +160,7 @@ namespace advancedZMQ
         zmq_msg_recv(&msg, socket, 0);
         strToJson.assign(static_cast<char *>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
         reply = nlohmann::json::parse(strToJson);
+        zmq_msg_close(&msg);
         return reply;
     }
 
