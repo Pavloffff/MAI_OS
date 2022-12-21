@@ -19,7 +19,7 @@
     } while (0)
 
 const int WAIT_TIME = 1000;
-const int PORT = 9000;
+const int PORT = 7000;
 
 class NTree
 {
@@ -29,7 +29,8 @@ public:
     NTree();
     void print();
     int dfs(int child, int curChild);
-    int find(int child);
+    // int findParent(int child);
+    int find(int parent, int child);
     int insert(int parent, int child);
     int erase(int parent, int child);
     ~NTree();
@@ -67,25 +68,39 @@ int NTree::dfs(int child, int curChild) {
     return -1;
 }
 
-int NTree::find(int child)
+int NTree::find(int parent, int child)
 {
-    // auto curParent = this->node.find(parent);
-    // if (curParent != this->node.cend()) {
-    //     
-    // }
     int ans = 0;
-    for (auto curChild: this->node[-1]) {
-        // std::cout << curChild << "\n";
+    for (auto curChild: this->node[parent]) {
         if (curChild == child) {
             return ans;
         } else if (dfs(child, curChild) != -1) {
-            // std::cout << dfs(child, curChild) << "\n";
             return ans;
         }
         ans++;
     }
     return -1;
 }
+
+// int NTree::findParent(int child)
+// {
+//     for (auto curParent: this->node) {
+//         if (curParent.second.find(child) != curParent.second.cend()) {
+//             return curParent.first;
+//         }
+//     }
+//     return -1;
+// }
+
+// int NTree::find(int child)
+// {
+//     for (auto curParent: this->node) {
+//         if (curParent.second.find(child) != curParent.second.cend()) {
+//             return 1;
+//         }
+//     }
+//     return -1;
+// }
 
 int NTree::insert(int parent, int child)
 {
@@ -141,13 +156,16 @@ namespace advancedZMQ
         if (!strToJson.empty()) {
             reply = nlohmann::json::parse(strToJson);
         } else {
+            if (debug) {
+                std::cout << "bad socket" << std::endl;
+            }
             reply["ans"] = "error";
         }
         if (debug) {
             std::cout << reply << "\n";
         }
         zmq_msg_close(&msg);
-        free(arg);
+        // free(arg);
         return reply;
     }
 
