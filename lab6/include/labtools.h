@@ -29,10 +29,12 @@ public:
     NTree();
     void print();
     int dfs(int child, int curChild);
-    // int findParent(int child);
+    int findCheck(int parent, int child);
     int find(int parent, int child);
+    std::pair<int, int> findNode(int node);
     int insert(int parent, int child);
     int erase(int parent, int child);
+    void destroyUndertree(int node);
     ~NTree();
 };
 
@@ -82,25 +84,25 @@ int NTree::find(int parent, int child)
     return -1;
 }
 
-// int NTree::findParent(int child)
-// {
-//     for (auto curParent: this->node) {
-//         if (curParent.second.find(child) != curParent.second.cend()) {
-//             return curParent.first;
-//         }
-//     }
-//     return -1;
-// }
+std::pair<int, int> NTree::findNode(int node)
+{
+    for (auto i: this->node) {
+        if (i.second.find(node) != i.second.cend()) {
+            return std::make_pair(i.first, 0);
+        }
+    }
+    return std::make_pair(-1, -1);
+}
 
-// int NTree::find(int child)
-// {
-//     for (auto curParent: this->node) {
-//         if (curParent.second.find(child) != curParent.second.cend()) {
-//             return 1;
-//         }
-//     }
-//     return -1;
-// }
+int NTree::findCheck(int parent, int child)
+{
+    for (auto curChild: this->node[parent]) {
+        if (curChild == child) {
+            return 1;
+        }
+    }
+    return -1;
+}
 
 int NTree::insert(int parent, int child)
 {
@@ -118,7 +120,8 @@ int NTree::insert(int parent, int child)
     return 0;
 }
 
-int NTree::erase(int parent, int child) {
+int NTree::erase(int parent, int child)
+{
     auto curParent = this->node.find(parent);
     if (curParent != this->node.cend()) {
         auto curChild = curParent->second.find(child);
@@ -132,27 +135,96 @@ int NTree::erase(int parent, int child) {
     return 0;
 }
 
+void NTree::destroyUndertree(int node)
+{
+    auto curNode = this->node.find(node);
+    if (curNode != this->node.cend()) {
+        for (auto it: curNode->second) {
+            this->node.erase(it);
+        }
+    }
+    curNode->second.clear();
+}
+
+// namespace advancedZMQ
+// {
+//     nlohmann::json sendAndRecv(nlohmann::json &request, zmq::socket_t &socket, int debug)
+//     {
+//         std::string strFromJson = request.dump();
+//         if (debug) {
+//             std::cout << strFromJson << std::endl;
+//         }
+//         void *arg = malloc(strlen(strFromJson.c_str()) + 1);
+//         memcpy(arg, strFromJson.c_str(), strlen(strFromJson.c_str()) + 1);
+//         zmq_msg_t msg;
+//         zmq_msg_init(&msg);
+//         zmq_msg_init_size(&msg, strlen(strFromJson.c_str()) + 1);
+//         zmq_msg_init_data(&msg, arg, strlen(strFromJson.c_str()) + 1, NULL, NULL);
+//         zmq_msg_send(&msg, socket, 0);
+//         nlohmann::json reply;
+//         std::string strToJson;
+//         zmq_msg_t msg2;
+//         zmq_msg_init(&msg2);
+//         zmq_msg_recv(&msg2, socket, 0);
+//         strToJson.assign(static_cast<char *>(zmq_msg_data(&msg2)), zmq_msg_size(&msg2));
+//         if (!strToJson.empty()) {
+//             reply = nlohmann::json::parse(strToJson);
+//         } else {
+//             if (debug) {
+//                 std::cout << "bad socket" << std::endl;
+//             }
+//             reply["ans"] = "error";
+//         }
+//         if (debug) {
+//             std::cout << reply << "\n";
+//         }
+//         zmq_msg_close(&msg);
+//         free(arg);
+//         return reply;
+//     }
+
+//     nlohmann::json Recv(void *socket)
+//     {
+//         nlohmann::json reply;
+//         std::string strToJson;
+//         zmq_msg_t msg;
+//         zmq_msg_init(&msg);
+//         zmq_msg_recv(&msg, socket, 0);
+//         strToJson.assign(static_cast<char *>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
+//         reply = nlohmann::json::parse(strToJson);
+//         zmq_msg_close(&msg);
+//         return reply;
+//     }
+
+//     void *Send(nlohmann::json &request, void *socket)
+//     {
+//         std::string strFromJson = request.dump();
+//         void *arg = malloc(strlen(strFromJson.c_str()) + 1);
+//         memcpy(arg, strFromJson.c_str(), strlen(strFromJson.c_str()) + 1);
+//         zmq_msg_t msg2;
+//         zmq_msg_init(&msg2);
+//         zmq_msg_init_size(&msg2, strlen(strFromJson.c_str()) + 1);
+//         zmq_msg_init_data(&msg2, arg, strlen(strFromJson.c_str()) + 1, NULL, NULL);
+//         zmq_msg_send(&msg2, socket, 0);
+//         return arg;
+//     }
+// }
+
 namespace advancedZMQ
 {
-    nlohmann::json sendAndRecv(nlohmann::json &request, void *socket, int debug)
+    nlohmann::json sendAndRecv(nlohmann::json &request, zmq::socket_t &socket, int debug)
     {
         std::string strFromJson = request.dump();
         if (debug) {
             std::cout << strFromJson << std::endl;
         }
-        void *arg = malloc(strlen(strFromJson.c_str()) + 1);
-        memcpy(arg, strFromJson.c_str(), strlen(strFromJson.c_str()) + 1);
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        zmq_msg_init_size(&msg, strlen(strFromJson.c_str()) + 1);
-        zmq_msg_init_data(&msg, arg, strlen(strFromJson.c_str()) + 1, NULL, NULL);
-        zmq_msg_send(&msg, socket, 0);
+        zmq::message_t msg(strFromJson.size());
+        memcpy(msg.data(), strFromJson.c_str(), strFromJson.size());
+        socket.send(msg);
         nlohmann::json reply;
-        std::string strToJson;
-        zmq_msg_t msg2;
-        zmq_msg_init(&msg2);
-        zmq_msg_recv(&msg2, socket, 0);
-        strToJson.assign(static_cast<char *>(zmq_msg_data(&msg2)), zmq_msg_size(&msg2));
+        zmq::message_t msg2;
+        socket.recv(msg2);
+        std::string strToJson(static_cast<char *> (msg2.data()), msg2.size());
         if (!strToJson.empty()) {
             reply = nlohmann::json::parse(strToJson);
         } else {
@@ -164,36 +236,26 @@ namespace advancedZMQ
         if (debug) {
             std::cout << reply << "\n";
         }
-        zmq_msg_close(&msg);
-        // free(arg);
         return reply;
     }
 
-    nlohmann::json Recv(void *socket)
-    {
-        nlohmann::json reply;
-        std::string strToJson;
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        zmq_msg_recv(&msg, socket, 0);
-        strToJson.assign(static_cast<char *>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
-        reply = nlohmann::json::parse(strToJson);
-        zmq_msg_close(&msg);
-        return reply;
-    }
-
-    void Send(nlohmann::json &request, void *socket)
+    void Send(nlohmann::json &request, zmq::socket_t &socket)
     {
         std::string strFromJson = request.dump();
-        void *arg = malloc(strlen(strFromJson.c_str()) + 1);
-        memcpy(arg, strFromJson.c_str(), strlen(strFromJson.c_str()) + 1);
-        zmq_msg_t msg2;
-        zmq_msg_init(&msg2);
-        zmq_msg_init_size(&msg2, strlen(strFromJson.c_str()) + 1);
-        zmq_msg_init_data(&msg2, arg, strlen(strFromJson.c_str()) + 1, NULL, NULL);
-        zmq_msg_send(&msg2, socket, 0);
+        zmq::message_t msg(strFromJson.size());
+        memcpy(msg.data(), strFromJson.c_str(), strFromJson.size());
+        socket.send(msg);
+    }
+
+    nlohmann::json Recv(zmq::socket_t &socket)
+    {
+        nlohmann::json reply;
+        zmq::message_t msg;
+        socket.recv(msg);
+        std::string strToJson(static_cast<char *> (msg.data()), msg.size());
+        reply = nlohmann::json::parse(strToJson);
+        return reply;
     }
 }
-
 
 #endif

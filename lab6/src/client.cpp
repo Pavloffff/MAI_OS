@@ -16,11 +16,13 @@ NTree nodes;
 
 int main(int argc, char const *argv[])
 {
-    void *context = zmq_ctx_new();
-    void *socket = zmq_socket(context, ZMQ_PAIR);
-    zmq_setsockopt(socket, ZMQ_RCVTIMEO, &WAIT_TIME, sizeof(int));
-    zmq_setsockopt(socket, ZMQ_SNDTIMEO, &WAIT_TIME, sizeof(int));
-    zmq_bind(socket, ("tcp://*:" + std::to_string(PORT - 1)).c_str());
+    zmq::context_t context(1);
+    zmq::socket_t socket(context, zmq::socket_type::pair);
+    socket.setsockopt(ZMQ_RCVTIMEO, WAIT_TIME);
+    socket.setsockopt(ZMQ_SNDTIMEO, WAIT_TIME);
+    // std::cout << ("tcp://127.0.0.1:" + std::to_string(PORT)).c_str() << std::endl; 
+    socket.bind(("tcp://127.0.0.1:" + std::to_string(PORT)));
+
     int pid = fork();
     if (pid == 0) {
         execl("./server", "./server", std::to_string(-1).c_str(), NULL);
@@ -39,7 +41,7 @@ int main(int argc, char const *argv[])
         if (command == "create") {
             int id, parentId;
             std::cin >> id >> parentId;
-            if (nodes.find(-1, parentId) == -1 && parentId != -1) {
+            if (nodes.findNode(parentId).second == -1 && parentId != -1) {
                 std::cout << "Error: parent " << parentId << " not found" << std::endl;
                 continue;
             }
@@ -52,8 +54,10 @@ int main(int argc, char const *argv[])
             pingRequest["id"] = parentId;
             nlohmann::json pingReply = sendAndRecv(pingRequest, socket, 0);
             if (pingReply["ans"] != "ok") {
-                zmq_close(socket);
-                zmq_ctx_destroy(context);
+                socket.close();
+                context.close();
+                // zmq_close(socket);
+                // zmq_ctx_destroy(context);
                 std::cout << "Error: parent " << parentId << " is unavailable" << std::endl;
                 continue;
             }
@@ -63,12 +67,44 @@ int main(int argc, char const *argv[])
             request["parentId"] = parentId;
             nlohmann::json reply = sendAndRecv(request, socket, 0);
             if (reply["ans"] != "ok") {
-                zmq_close(socket);
-                zmq_ctx_destroy(context);
+                // zmq_close(socket);
+                // zmq_ctx_destroy(context);
+                socket.close();
+                context.close();
                 std::cout << "Error: parent " << parentId << " is unavailable" << std::endl;
                 continue;
             } else {
                 nodes.insert(parentId, id);
+            }
+        } else if (command == "remove") {
+            int id, parentId;
+            std::cin >> id;
+            if (nodes.findNode(id).second == -1) {
+                std::cout << "Error: node " << id << " not found" << std::endl;
+                continue;
+            }
+            parentId = nodes.findNode(id).first;
+            std::cout << parentId << std::endl;
+            nlohmann::json pingRequest;
+            pingRequest["type"] = "ping";
+            pingRequest["id"] = parentId;
+            nlohmann::json pingReply = sendAndRecv(pingRequest, socket, 0);
+            if (pingReply["ans"] != "ok") {
+                std::cout << "Error: parent " << parentId << " is unavailable" << std::endl;
+                continue;
+            }
+            nlohmann::json request;
+            request["type"] = "remove";
+            request["id"] = id;
+            request["parentId"] = parentId;
+            nlohmann::json reply = sendAndRecv(request, socket, 0);
+            if (reply["ans"] != "ok") {
+                std::cout << "Error: node " << id << " is unavailable" << std::endl;
+                continue;
+            } else {
+                nodes.destroyUndertree(id);
+                nodes.erase(parentId, id);
+                std::cout << "ok" << std::endl;
             }
         } else if (command == "print") {
             nodes.print();
@@ -82,7 +118,7 @@ int main(int argc, char const *argv[])
                 std::cout << "Error: control node can't do calculation" << std::endl;
                 continue;
             }
-            if (nodes.find(-1, id) == -1) {
+            if (nodes.findNode(id).second == -1) {
                 std::cout << "Error: node " << id << " not found" << std::endl;
                 continue;
             }
@@ -95,7 +131,7 @@ int main(int argc, char const *argv[])
                 request["id"] = id;
                 request["key"] = key;
                 request["value"] = value;
-                nlohmann::json reply = sendAndRecv(request, socket, 1);
+                nlohmann::json reply = sendAndRecv(request, socket, 0);
                 if (reply["ans"] != "ok") {
                     std::cout << "Error: node " << id << " is unavailable" << std::endl;
                     continue;
@@ -106,11 +142,18 @@ int main(int argc, char const *argv[])
                 request["action"] = "check";
                 request["id"] = id;
                 request["key"] = key;
-                nlohmann::json reply = sendAndRecv(request, socket, 1);
+                nlohmann::json reply = sendAndRecv(request, socket, 0);
                 if (reply["ans"] != "ok") {
                     std::cout << "Error: node " << id << " is unavailable" << std::endl;
                     continue;
                 }
+            }
+        } else if (command == "pingall") {
+            nlohmann::json request;
+            request["type"] = "pingall";
+            nlohmann::json reply = sendAndRecv(request, socket, 0);
+            if (reply["ans"] == "ok") {
+                std::cout << "ok:-1" << std::endl;
             }
         }
     }
