@@ -1,1 +1,0 @@
-/usr/bin/c++ -fsanitize=address -g CMakeFiles/demon.dir/src/demon.cpp.o -o demon  -lzmq 

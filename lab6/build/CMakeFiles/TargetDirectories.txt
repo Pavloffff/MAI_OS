@@ -1,5 +1,0 @@
-/home/ggame/OS/lab6/t6_APIdemon/build/CMakeFiles/client.dir
-/home/ggame/OS/lab6/t6_APIdemon/build/CMakeFiles/server.dir
-/home/ggame/OS/lab6/t6_APIdemon/build/CMakeFiles/demon.dir
-/home/ggame/OS/lab6/t6_APIdemon/build/CMakeFiles/edit_cache.dir
-/home/ggame/OS/lab6/t6_APIdemon/build/CMakeFiles/rebuild_cache.dir
