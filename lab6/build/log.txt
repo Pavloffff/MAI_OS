@@ -1,0 +1,9 @@
+    PID TTY          TIME CMD
+   3016 tty2     00:03:22 Xorg
+   3128 tty2     00:00:00 gnome-session-b
+  23595 pts/2    00:00:00 make.sh
+  23774 pts/2    00:00:00 server
+  23856 pts/2    00:00:00 server
+  23861 pts/2    00:00:00 server
+  23865 pts/2    00:00:00 server <defunct>
+  24138 pts/2    00:00:00 ps

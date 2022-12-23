@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <vector>
 #include <set>
 #include <zmq.hpp>
 #include <nlohmann/json.hpp>
@@ -20,6 +21,7 @@
 
 const int WAIT_TIME = 1000;
 const int PORT = 7000;
+const int DEMON_PORT = 6900;
 
 class NTree
 {
@@ -32,6 +34,7 @@ public:
     int findCheck(int parent, int child);
     int find(int parent, int child);
     std::pair<int, int> findNode(int node);
+    std::vector<int> findChilds(int node);
     int insert(int parent, int child);
     int erase(int parent, int child);
     void destroyUndertree(int node);
@@ -94,6 +97,15 @@ std::pair<int, int> NTree::findNode(int node)
     return std::make_pair(-1, -1);
 }
 
+std::vector<int> NTree::findChilds(int node)
+{
+    std::vector<int> res;
+    for (auto i: this->node[node]) {
+        res.push_back(i);
+    }
+    return res;
+}
+
 int NTree::findCheck(int parent, int child)
 {
     for (auto curChild: this->node[parent]) {
@@ -140,75 +152,15 @@ void NTree::destroyUndertree(int node)
     auto curNode = this->node.find(node);
     if (curNode != this->node.cend()) {
         for (auto it: curNode->second) {
-            this->node.erase(it);
+            this->destroyUndertree(it);
         }
     }
     curNode->second.clear();
+    int parent = this->findNode(node).first;
+    auto parentN = this->node.find(parent);
+    parentN->second.erase(node);
+    this->node.erase(node);
 }
-
-// namespace advancedZMQ
-// {
-//     nlohmann::json sendAndRecv(nlohmann::json &request, zmq::socket_t &socket, int debug)
-//     {
-//         std::string strFromJson = request.dump();
-//         if (debug) {
-//             std::cout << strFromJson << std::endl;
-//         }
-//         void *arg = malloc(strlen(strFromJson.c_str()) + 1);
-//         memcpy(arg, strFromJson.c_str(), strlen(strFromJson.c_str()) + 1);
-//         zmq_msg_t msg;
-//         zmq_msg_init(&msg);
-//         zmq_msg_init_size(&msg, strlen(strFromJson.c_str()) + 1);
-//         zmq_msg_init_data(&msg, arg, strlen(strFromJson.c_str()) + 1, NULL, NULL);
-//         zmq_msg_send(&msg, socket, 0);
-//         nlohmann::json reply;
-//         std::string strToJson;
-//         zmq_msg_t msg2;
-//         zmq_msg_init(&msg2);
-//         zmq_msg_recv(&msg2, socket, 0);
-//         strToJson.assign(static_cast<char *>(zmq_msg_data(&msg2)), zmq_msg_size(&msg2));
-//         if (!strToJson.empty()) {
-//             reply = nlohmann::json::parse(strToJson);
-//         } else {
-//             if (debug) {
-//                 std::cout << "bad socket" << std::endl;
-//             }
-//             reply["ans"] = "error";
-//         }
-//         if (debug) {
-//             std::cout << reply << "\n";
-//         }
-//         zmq_msg_close(&msg);
-//         free(arg);
-//         return reply;
-//     }
-
-//     nlohmann::json Recv(void *socket)
-//     {
-//         nlohmann::json reply;
-//         std::string strToJson;
-//         zmq_msg_t msg;
-//         zmq_msg_init(&msg);
-//         zmq_msg_recv(&msg, socket, 0);
-//         strToJson.assign(static_cast<char *>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
-//         reply = nlohmann::json::parse(strToJson);
-//         zmq_msg_close(&msg);
-//         return reply;
-//     }
-
-//     void *Send(nlohmann::json &request, void *socket)
-//     {
-//         std::string strFromJson = request.dump();
-//         void *arg = malloc(strlen(strFromJson.c_str()) + 1);
-//         memcpy(arg, strFromJson.c_str(), strlen(strFromJson.c_str()) + 1);
-//         zmq_msg_t msg2;
-//         zmq_msg_init(&msg2);
-//         zmq_msg_init_size(&msg2, strlen(strFromJson.c_str()) + 1);
-//         zmq_msg_init_data(&msg2, arg, strlen(strFromJson.c_str()) + 1, NULL, NULL);
-//         zmq_msg_send(&msg2, socket, 0);
-//         return arg;
-//     }
-// }
 
 namespace advancedZMQ
 {

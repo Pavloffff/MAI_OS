@@ -13,6 +13,7 @@
 using namespace advancedZMQ;
 
 std::vector<zmq::socket_t> childSockets;
+std::vector<int> childIds;
 
 int main(int argc, char const *argv[])
 {
@@ -20,15 +21,14 @@ int main(int argc, char const *argv[])
     
     zmq::context_t parentContext(1);
     zmq::socket_t parentSocket(parentContext, zmq::socket_type::pair);
-    // std::cout << ("tcp://127.0.0.1:" + std::to_string(PORT + curId + 1)).c_str() << std::endl;
     parentSocket.connect(("tcp://127.0.0.1:" + std::to_string(PORT + curId + 1)));
 
     std::map<std::string, int> localDict;
     void *arg = NULL;
     while (flag) {
         nlohmann::json reply = Recv(parentSocket);
-        // std::cout << reply << std::endl;
         nlohmann::json request;
+        request["type"] = reply["type"];
         request["id"] = curId;
         request["pid"] = 0;
         request["ans"] = "error";
@@ -72,7 +72,9 @@ int main(int argc, char const *argv[])
                         std::cout << "OK: " << pingReply["pid"] << std::endl;
                         int i = reply["id"];
                         childSockets.push_back(std::move(childSocket));
+                        childIds.push_back(reply["id"]);
                         request["ans"] = "ok";
+                        request["parentId"] = reply["parentId"];
                     }
                 }
             } else {
@@ -86,44 +88,37 @@ int main(int argc, char const *argv[])
                 }
             }
         } else if (reply["type"] == "remove") {
-            if (reply["id"] == curId) {
+            int c = 0;
+            for (int i = 0; i < childSockets.size(); i++) {
+                int childId = childIds[i];
                 nlohmann::json destroyRequest;
                 destroyRequest["type"] = "destroy";
-                for (int i = 0; i < childSockets.size(); i++) {
-                    nlohmann::json destroyReply = sendAndRecv(destroyRequest, childSockets[i], 0);
+                if (childId == reply["id"]) {
+                    Send(destroyRequest, childSockets[i]);
+                    int k = reply["id"];
+                    childSockets.erase(std::next(childSockets.begin() + i));
+                    childIds.erase(childIds.begin() + i);
+                    c++;
+                    break; 
                 }
+            }
+            if (c > 0) {
                 request["ans"] = "ok";
-                Send(request, parentSocket);
-                // zmq_close(parentSocket);
-                // zmq_ctx_destroy(parentContext);
-                childSockets.clear();
-                exit(0);
-            } else { 
-                nlohmann::json newRequest = reply;
-                for (int i = 0; i < childSockets.size(); i++) {
-                    nlohmann::json newReply = sendAndRecv(newRequest, childSockets[i], 0);
-                    if (newReply["ans"] == "ok") {
-                        request["ans"] = "ok";
-                        break;
-                    }
+                c = 0;
+            }
+            for (int i = 0; i < childSockets.size(); i++) {
+                nlohmann::json newReply = sendAndRecv(reply, childSockets[i], 0);
+                if (newReply["ans"] == "ok") {
+                    request["ans"] = "ok";
                 }
             }
         } else if (reply["type"] == "destroy") {
             nlohmann::json newRequest = reply;
             for (int i = 0; i < childSockets.size(); i++) {
-                nlohmann::json newReply = sendAndRecv(newRequest, childSockets[i], 0);
-                if (newReply["ans"] == "ok") {
-                    request["ans"] = "ok";
-                }
+                int childId = childIds[i];
+                Send(newRequest, childSockets[i]);
             }
-            Send(request, parentSocket);
-            // zmq_close(parentSocket);
-            // zmq_ctx_destroy(parentContext);
-            // parentSocket.close();
-            // parentSocket.close();
-            std::cout << curId << std::endl;
-            childSockets.clear();
-            exit(0);
+            flag = 0;
         } else if (reply["type"] == "exec") {
             if (reply["action"] == "add") {
                 if (reply["id"] == curId) {
@@ -164,21 +159,23 @@ int main(int argc, char const *argv[])
                 }
             }
         } else if (reply["type"] == "pingall") {
-            std::cout << curId << std::endl;
-            nlohmann::json newRequest = reply;
+            nlohmann::json newRequest;
+            newRequest["type"] = "pingall";
             for (int i = 0; i < childSockets.size(); i++) {
                 nlohmann::json newReply = sendAndRecv(newRequest, childSockets[i], 0);
                 if (newReply["ans"] == "ok") {
                     request["ans"] = "ok";
                 } else {
-                    std::cout << request["id"] << std::endl;
+                    std::cout << childIds[i] << std::endl;
                 }
             }
             request["ans"] = "ok";
         }
         Send(request, parentSocket);
     }
-    // parentSocket.close();
-    // parentContext.close();
+    for (int i = 0; i < childSockets.size(); i++) {
+        childSockets[i].close();
+    }
+    parentSocket.close();
     return 0;
 }
