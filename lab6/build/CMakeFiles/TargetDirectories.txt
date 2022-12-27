@@ -1,0 +1,5 @@
+/home/ggame/OS/ready/lab6/build/CMakeFiles/client.dir
+/home/ggame/OS/ready/lab6/build/CMakeFiles/server.dir
+/home/ggame/OS/ready/lab6/build/CMakeFiles/demon.dir
+/home/ggame/OS/ready/lab6/build/CMakeFiles/edit_cache.dir
+/home/ggame/OS/ready/lab6/build/CMakeFiles/rebuild_cache.dir
