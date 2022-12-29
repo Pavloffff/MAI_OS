@@ -3,6 +3,9 @@
 #include <thread>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
 #include <semaphore.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -30,6 +33,9 @@ void createSession(std::string &playerName, std::string &sessionName, int cntOfP
     createRequest["ans"] = 0;
     createRequest["sessionName"] = sessionName;
     createRequest["cntOfPlayers"] = cntOfPlayers;
+    srand(time(NULL));
+    int answer = 1000 + rand() % (9999 - 1000 + 1);
+    createRequest["hiddenNum"] = answer;
     sem_t *mainSem = sem_open(mainSemName.c_str(), O_CREAT, accessPerm, 0);
     int state = 0;
     while (state != 1) {
@@ -145,6 +151,9 @@ int main(int argc, char const *argv[])
             std::string name;
             int cntOfPlayers;
             std::cin >> name >> cntOfPlayers;
+            if (cntOfPlayers < 2) {
+                std::cout << "Error: count of players must be greater then 1\n";
+            }
             createSession(playerName, name, cntOfPlayers);
             flag = 0;
         } else if (command == "join") {

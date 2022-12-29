@@ -22,13 +22,15 @@ int main(int argc, char const *argv[])
     sem_unlink(mainSemName.c_str());
     sem_t *mainSem = sem_open(mainSemName.c_str(), O_CREAT, accessPerm, 0);
     int state = 0;
-    while (state++ < 1) {
-        sem_post(mainSem);
-    }
-    while (state-- > 2) {
-        sem_wait(mainSem);
-    }
+    // while (state++ < 1) {
+    //     sem_post(mainSem);
+    // }
+    // while (state-- > 2) {
+    //     sem_wait(mainSem);
+    // }
+    semSetvalue(mainSem, 1);
     sem_getvalue(mainSem, &state);
+    std::cout << "apidemon state: " << state << std::endl;
     while (1) {
         sem_getvalue(mainSem, &state);
         if (state == 0) {
@@ -60,6 +62,7 @@ int main(int argc, char const *argv[])
                         srand(time(NULL));
                         int answer = 1000 + rand() % (9999 - 1000 + 1);
                         session.hiddenNum = answer;
+                        createReply["hiddenNum"] = session.hiddenNum;
                         session.playerList.push_back(player);
                         sessions.insert({session.sessionName, session});
                         for (auto i: sessions) {
@@ -78,7 +81,36 @@ int main(int argc, char const *argv[])
                     }
                 } else if (createReply["type"] == "join") {
                     if (sessions.find(createReply["sessionName"]) != sessions.cend()) {
-                        
+                        if (sessions[createReply["sessionName"]].cntOfPlayers <= sessions[createReply["sessionName"]].playerList.size()) {
+                            request["check"] = "error";    
+                        } else {
+                            Player player;
+                            player.ans = createReply["ans"];
+                            player.bulls = createReply["bulls"];
+                            player.cows = createReply["cows"];
+                            player.name = createReply["name"];
+                            sessions[createReply["sessionName"]].playerList.push_back(player);
+                            std::string joinSemName = createReply["sessionName"];
+                            joinSemName += ".semaphore";
+                            sem_t *joinSem = sem_open(joinSemName.c_str(), O_CREAT, accessPerm, 0);
+                            std::string joinFdName = createReply["sessionName"];
+                            int joinFd = shm_open(joinFdName.c_str(), O_RDWR | O_CREAT, accessPerm);
+                            std::string strFromJson = createReply.dump();
+                            std::cout << "str from json: " << strFromJson << std::endl;
+                            char *buffer = (char *) strFromJson.c_str();
+                            int sz = strlen(buffer) + 1;
+                            ftruncate(mainFd, sz);
+                            char *mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, joinFd, 0);
+                            memset(mapped, '\0', sz);
+                            sprintf(mapped, "%s", buffer);
+                            munmap(mapped, sz);
+                            close(mainFd);
+                            sem_post(joinSem);
+                            request["check"] = "ok";
+                            request["state"] = sessions[createReply["sessionName"]].playerList.size() - 1;
+                        }
+                    } else {
+                        request["check"] = "error";
                     }
                 }
             } else {
@@ -86,7 +118,7 @@ int main(int argc, char const *argv[])
                 sem_post(mainSem);
                 continue;
             }
-            // std::cout << request << std::endl;
+            std::cout << request << std::endl;
             std::string strFromJson = request.dump();
             char *buffer = (char *) strFromJson.c_str();
             sz = strlen(buffer) + 1;

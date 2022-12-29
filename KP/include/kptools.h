@@ -6,10 +6,25 @@
 #include <vector>
 #include <map>
 #include <sys/stat.h>
+#include <mutex>
 
 const std::string mainFileName = "main.back";
 const std::string mainSemName = "main.semaphore";
 int accessPerm = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH;
+
+void semSetvalue(sem_t *semaphore, int state)
+{
+    std::mutex mx;
+    int s = 0;
+    mx.lock();
+    while (s++ < state) {
+        sem_post(semaphore);
+    }
+    while (s-- > state + 1) {
+        sem_wait(semaphore);
+    }
+    mx.unlock();
+}
 
 namespace gametools
 {
