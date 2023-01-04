@@ -57,7 +57,6 @@ void server(std::string &sessionName)
             char *mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
             std::string strToJson = mapped;
             nlohmann::json request = nlohmann::json::parse(strToJson);
-            std::cout << request << std::endl;
             for (auto i: session.playerList) {
                 std::string ansField = i.name + "ans";
                 std::string bullsField = i.name + "bulls";
@@ -72,10 +71,8 @@ void server(std::string &sessionName)
                 if (i.bulls == 4) {
                     request["winner"] = i.name;
                 }
-                std::cout << i << std::endl;
             }
             std::string strFromJson = request.dump();
-            std::cout << request << std::endl;
             char *buffer = (char *) strFromJson.c_str();
             sz = strlen(buffer) + 1;
             ftruncate(gameFd, sz);
@@ -84,9 +81,9 @@ void server(std::string &sessionName)
             sprintf(mapped, "%s", buffer);
             munmap(mapped, sz);
             close(gameFd);
+            std::cout << session << std::endl;
             sem_post(gameSem);
         } else if (state % (session.cntOfPlayers + 1) == 0 && firstIt == 1) {
-            std::cout << "firstState" << "\n";
             nlohmann::json request;
             for (auto i: session.playerList) {
                 std::string ansField = i.name + "ans";
@@ -107,6 +104,7 @@ void server(std::string &sessionName)
             munmap(mapped, sz);
             close(gameFd);
             firstIt = 0;
+            std::cout << session << std::endl;
             sem_post(gameSem);
         }
     }
@@ -121,12 +119,10 @@ void waitAlllPlayers(std::string &sessionName)
     int state = 0;
     
     sem_getvalue(joinSem, &state);
-    std::cout << "server state: " << state << std::endl;
     std::string joinFdName;
     while (state < session.cntOfPlayers) {
         sem_getvalue(joinSem, &state);
         if (state > session.curPlayerIndex) {
-            std::cout << state << " " << session.curPlayerIndex << std::endl;
             joinFdName = sessionName.c_str();
             int joinFd = shm_open(joinFdName.c_str(), O_RDWR | O_CREAT, accessPerm);
             struct stat statBuf;
@@ -145,7 +141,6 @@ void waitAlllPlayers(std::string &sessionName)
             playerN.bulls = joinReply["bulls"];
             playerN.cows = joinReply["cows"];
             session.playerList.push_back(playerN);
-            std::cout << session << std::endl;
             session.curPlayerIndex = state;
         }
     }
@@ -167,19 +162,16 @@ int main(int argc, char const *argv[])
     semSetvalue(apiSem, session.cntOfPlayers);
     int f = 0;
     sem_getvalue(apiSem, &f);
-    std::cout << "apiState " << f << std::endl;
     
     waitAlllPlayers(session.sessionName);
 
-    std::cout << "hello\n";
     while (f > 0) {
         sem_wait(apiSem);
         sem_getvalue(apiSem, &f);
-        std::cout << "apiState " << f << std::endl;
+        std::cout << f << std::endl;
         sleep(1);
     }
     sem_getvalue(apiSem, &f);
-    std::cout << "apiState " << f << std::endl;
     server(session.sessionName);
     return 0;
 }

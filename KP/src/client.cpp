@@ -41,7 +41,6 @@ void client(std::string &playerName, std::string &sessionName, int state, int cn
     semSetvalue(apiSem, cnt);
     int apiState = 0;
     sem_getvalue(apiSem, &apiState);
-    std::cout << apiState << "\n";
     if (state > 1) {
         while (apiState != state) {
             sem_getvalue(apiSem, &apiState);
@@ -58,7 +57,6 @@ void client(std::string &playerName, std::string &sessionName, int state, int cn
         gameSem = sem_open(gameSemName.c_str(), O_CREAT, accessPerm, 0);
     }
     sem_getvalue(gameSem, &apiState);
-    std::cout << apiState << std::endl;
     int firstIt = 1, cntOfBulls = 0, cntOfCows = 0, flag = 1;
     while (flag) {
         sem_getvalue(gameSem, &apiState);
@@ -223,7 +221,54 @@ void joinSession(std::string &playerName, std::string &sessionName)
 void findSession(std::string &playerName)
 {
     nlohmann::json findRequest;
-
+    findRequest["type"] = "find";
+    findRequest["name"] = playerName;
+    findRequest["bulls"] = 0;
+    findRequest["cows"] = 0;
+    findRequest["ans"] = "0000";
+    sem_t *mainSem = sem_open(mainSemName.c_str(), O_CREAT, accessPerm, 0);
+    int state = 0;
+    while (state != 1) {
+        sem_getvalue(mainSem, &state);
+    }
+    int mainFd = shm_open(mainFileName.c_str(), O_RDWR | O_CREAT, accessPerm);
+    std::string strFromJson = findRequest.dump();
+    char *buffer = (char *) strFromJson.c_str();
+    int sz = strlen(buffer) + 1;
+    ftruncate(mainFd, sz);
+    char *mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, mainFd, 0);
+    memset(mapped, '\0', sz);
+    sprintf(mapped, "%s", buffer);
+    munmap(mapped, sz);
+    close(mainFd);
+    sem_wait(mainSem);
+    sem_getvalue(mainSem, &state);
+    while (state != 1) {
+        sem_getvalue(mainSem, &state);
+    }
+    mainFd = shm_open(mainFileName.c_str(), O_RDWR | O_CREAT, accessPerm);
+    struct stat statBuf;
+    fstat(mainFd, &statBuf);
+    sz = statBuf.st_size;
+    ftruncate(mainFd, sz);
+    mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, mainFd, 0);
+    nlohmann::json reply;
+    std::string strToJson = mapped;
+    reply = nlohmann::json::parse(strToJson);
+    int state2 = 0, cnt = 0;
+    std::string sessionName;
+    if (reply["check"] == "ok") {
+        std::string sessionName = reply["sessionName"];
+        std::cout << "Session " << sessionName << " joined" << std::endl; 
+        state2 = reply["state"];
+        cnt = reply["cnt"];
+    } else {
+        std::cout << "Fail: session not found" << std::endl;
+    }
+    sem_wait(mainSem);
+    if (reply["check"] == "ok") {
+        client(playerName, sessionName, state2, cnt);
+    }
 }
 
 int main(int argc, char const *argv[])
@@ -260,7 +305,7 @@ int main(int argc, char const *argv[])
             joinSession(playerName, name);
             flag = 0;
         } else if (command == "find") {
-            
+            findSession(playerName);
             flag = 0;
         } else {
             std::cout << "Wrong command!\n"; 
