@@ -12,10 +12,11 @@ const std::string mainFileName = "main.back";
 const std::string mainSemName = "main.semaphore";
 int accessPerm = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH;
 
-void semSetvalue(sem_t *semaphore, int state)
+int semSetvalue(sem_t *semaphore, int state)
 {
     std::mutex mx;
     int s = 0;
+    sem_getvalue(semaphore, &s);
     mx.lock();
     while (s++ < state) {
         sem_post(semaphore);
@@ -24,6 +25,7 @@ void semSetvalue(sem_t *semaphore, int state)
         sem_wait(semaphore);
     }
     mx.unlock();
+    return s;
 }
 
 namespace gametools

@@ -18,13 +18,89 @@
 
 using namespace gametools;
 
-void client(std::string &playerName, std::string &sessionName, int state)
-{
-    std::cout << playerName << " " << sessionName << " " << state << std::endl; 
+void client(std::string &playerName, std::string &sessionName, int state, int cnt)
+{ 
+    std::cout << playerName << " " << sessionName << " " << state << " " << cnt << std::endl;
+    std::string apiSemName = sessionName + "api.semaphore";
+    std::cout << apiSemName << "\n";
+    sem_t *apiSem = sem_open(apiSemName.c_str(), O_CREAT, accessPerm, 0);
+    
+    semSetvalue(apiSem, cnt);
+    int apiState = 0;
+    sem_getvalue(apiSem, &apiState);
+    std::cout << apiState << "\n";
+    if (state > 1) {
+        while (apiState != state) {
+            sem_getvalue(apiSem, &apiState);
+            // std::cout << apiState << " " << state << "\n";
+        }
+    }
+    sem_getvalue(apiSem, &apiState);
+    std::cout << apiState << "\n";
+    sem_close(apiSem);
+    std::string gameSemName = sessionName + "game.semaphore";
+    sem_t *gameSem;
+    std::cout << playerName << " " << sessionName << " " << state << " " << cnt << std::endl;
+    if (state == 1) {
+        sem_unlink(gameSemName.c_str());
+        gameSem = sem_open(gameSemName.c_str(), O_CREAT, accessPerm, 0);
+    } else {
+        gameSem = sem_open(gameSemName.c_str(), O_CREAT, accessPerm, 0);
+    }
+    sem_getvalue(gameSem, &apiState);
+    std::cout << apiState << std::endl;
+    int firstIt = 1, cntOfBulls = 0, cntOfCows = 0, flag = 1;
+    while (flag) {
+        sem_getvalue(gameSem, &apiState);
+        if (apiState % (cnt + 1) == state) {
+            int gameFd = shm_open((sessionName + "game.back").c_str(), O_RDWR | O_CREAT, accessPerm);
+            char *mapped;
+            if (firstIt == 0) {
+                struct stat statBuf;
+                fstat(gameFd, &statBuf);
+                int sz = statBuf.st_size;
+                ftruncate(gameFd, sz);
+                mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
+                nlohmann::json reply;
+                std::string strToJson = mapped;
+                reply = nlohmann::json::parse(strToJson);
+                cntOfBulls = reply["bulls"];
+                cntOfCows = reply["cows"];
+                std::cout << "Bulls: " << cntOfBulls << std::endl;
+                std::cout << "Cows: " << cntOfCows << std::endl;
+                munmap(mapped, sz);
+            } else {
+                firstIt = 0;
+            }
+            int answer = 0;
+            std::cout << "Input number between 1000 and 9999: ";
+            std::cin >> answer;
+            if (answer > 999 && answer < 10000) {
+                std::cout << std::endl;
+            } else {
+                std::cout << "\nWrong number. Try again" << std::endl;
+                continue;
+            }
+            nlohmann::json request;
+            request["name"] = playerName;
+            request["ans"] = answer;
+            std::string strFromJson = request.dump();
+            char *buffer = (char *) strFromJson.c_str();
+            int sz = strlen(buffer) + 1;
+            ftruncate(gameFd, sz);
+            mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
+            memset(mapped, '\0', sz);
+            sprintf(mapped, "%s", buffer);
+            munmap(mapped, sz);
+            close(gameFd);
+            sem_post(gameSem);
+        }
+    }
 }
 
 void createSession(std::string &playerName, std::string &sessionName, int cntOfPlayers)
 {
+    int state2 = 0;
     nlohmann::json createRequest;
     createRequest["type"] = "create";
     createRequest["name"] = playerName;
@@ -67,14 +143,14 @@ void createSession(std::string &playerName, std::string &sessionName, int cntOfP
     reply = nlohmann::json::parse(strToJson);
     if (reply["check"] == "ok") {
         std::cout << "Session " << sessionName << " created" << std::endl; 
-        int state2 = reply["state"];
-        client(playerName, sessionName, state2);
+        state2 = reply["state"];
     } else {
         std::cout << "Fail: name " << sessionName << " is already exists" << std::endl;
     }
-    // std::cout << reply << std::endl;
     sem_wait(mainSem);
-    // sem_close(mainSem);
+    // if (reply["check"] == "ok") {
+    //     client(playerName, sessionName, state2, cntOfPlayers);
+    // }
 }
 
 void joinSession(std::string &playerName, std::string &sessionName)
@@ -86,7 +162,7 @@ void joinSession(std::string &playerName, std::string &sessionName)
     joinRequest["cows"] = 0;
     joinRequest["ans"] = 0;
     joinRequest["sessionName"] = sessionName;
-        sem_t *mainSem = sem_open(mainSemName.c_str(), O_CREAT, accessPerm, 0);
+    sem_t *mainSem = sem_open(mainSemName.c_str(), O_CREAT, accessPerm, 0);
     int state = 0;
     while (state != 1) {
         sem_getvalue(mainSem, &state);
@@ -115,19 +191,23 @@ void joinSession(std::string &playerName, std::string &sessionName)
     nlohmann::json reply;
     std::string strToJson = mapped;
     reply = nlohmann::json::parse(strToJson);
+    int state2 = 0, cnt = 0;
     if (reply["check"] == "ok") {
         std::cout << "Session " << sessionName << " joined" << std::endl; 
-        int state2 = reply["state"];
-        client(playerName, sessionName, state2);
+        state2 = reply["state"];
+        cnt = reply["cnt"];
     } else {
         std::cout << "Fail: name " << sessionName << " is not exists" << std::endl;
     }
-    // std::cout << reply << std::endl;
     sem_wait(mainSem);
+    if (reply["check"] == "ok") {
+        client(playerName, sessionName, state2, cnt);
+    }
 }
 
 void findSession(std::string &playerName)
 {
+    nlohmann::json findRequest;
 
 }
 
@@ -155,6 +235,7 @@ int main(int argc, char const *argv[])
                 std::cout << "Error: count of players must be greater then 1\n";
             }
             createSession(playerName, name, cntOfPlayers);
+            joinSession(playerName, name);
             flag = 0;
         } else if (command == "join") {
             std::string name;
