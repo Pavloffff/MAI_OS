@@ -16,39 +16,97 @@
 #include <map>
 #include <nlohmann/json.hpp>
 
-// написать мемори мап типа апи семафор сюда передавать json-ки чтобы сервер ждал когда зайдут все игроки (ой не апи семафор а семафор с именем сессии карл)
-
 using namespace gametools;
 
 Session session;
+std::map<char, int> hidV;
 
-void ggame(int ans)
+std::pair<int, int> ggame(std::string ans)
 {
-
+    int cntOfBulls = 0, cntOfCows = 0, ind = 0;
+    for (int i = 0; i < ans.size(); i++) {
+        if (hidV.find(ans[i]) != hidV.cend()) {
+            if (hidV[ans[i]] == i) {
+                cntOfBulls++;
+            } else {
+                cntOfCows++;
+            }
+        }
+    }
+    return std::make_pair(cntOfBulls, cntOfCows);
 }
 
 void server(std::string &sessionName)
 {
+    std::string tmp = session.hiddenNum;
+    for (int i = 0; i < tmp.size(); i++) {
+        hidV.insert({tmp[i], i});
+    }
     std::string gameSemName = sessionName + "game.semaphore";
     sem_t *gameSem = sem_open(gameSemName.c_str(), O_CREAT, accessPerm, 0);
     semSetvalue(gameSem, 0);
-    int state = 0, firstIt = 0;
+    int state = 0, firstIt = 1;
     while (1) {
         sem_getvalue(gameSem, &state);
-        if (state % (session.cntOfPlayers + 1) == 0 && firstIt == 1) {
+        if (state % (session.cntOfPlayers + 1) == 0 && firstIt == 0) {
             int gameFd = shm_open((sessionName + "game.back").c_str(), O_RDWR | O_CREAT, accessPerm);
             struct stat statBuf;
             fstat(gameFd, &statBuf);
             int sz = statBuf.st_size;
             ftruncate(gameFd, sz);
             char *mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
-            nlohmann::json reply;
             std::string strToJson = mapped;
-            reply = nlohmann::json::parse(strToJson);
-            std::cout << reply << std::endl;
+            nlohmann::json request = nlohmann::json::parse(strToJson);
+            std::cout << request << std::endl;
+            for (auto i: session.playerList) {
+                std::string ansField = i.name + "ans";
+                std::string bullsField = i.name + "bulls";
+                std::string cowsField = i.name + "cows";
+                i.ans = request[ansField];
+                std::pair<int, int> result = ggame(i.ans);
+                i.bulls = result.first;
+                i.cows = result.second;
+                request[ansField] = i.ans;
+                request[bullsField] = i.bulls;
+                request[cowsField] = i.cows;
+                if (i.bulls == 4) {
+                    request["winner"] = i.name;
+                }
+                std::cout << i << std::endl;
+            }
+            std::string strFromJson = request.dump();
+            std::cout << request << std::endl;
+            char *buffer = (char *) strFromJson.c_str();
+            sz = strlen(buffer) + 1;
+            ftruncate(gameFd, sz);
+            mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
+            memset(mapped, '\0', sz);
+            sprintf(mapped, "%s", buffer);
+            munmap(mapped, sz);
+            close(gameFd);
             sem_post(gameSem);
-        } else if (state % (session.cntOfPlayers + 1) == 0 && firstIt == 0) {
-            firstIt = 1;
+        } else if (state % (session.cntOfPlayers + 1) == 0 && firstIt == 1) {
+            std::cout << "firstState" << "\n";
+            nlohmann::json request;
+            for (auto i: session.playerList) {
+                std::string ansField = i.name + "ans";
+                std::string bullsField = i.name + "bulls";
+                std::string cowsField = i.name + "cows";
+                request[ansField] = i.ans;
+                request[bullsField] = i.bulls;
+                request[cowsField] = i.cows;
+            }
+            std::string strFromJson = request.dump();
+            int gameFd = shm_open((sessionName + "game.back").c_str(), O_RDWR | O_CREAT, accessPerm);
+            char *buffer = (char *) strFromJson.c_str();
+            int sz = strlen(buffer) + 1;
+            ftruncate(gameFd, sz);
+            char *mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
+            memset(mapped, '\0', sz);
+            sprintf(mapped, "%s", buffer);
+            munmap(mapped, sz);
+            close(gameFd);
+            firstIt = 0;
             sem_post(gameSem);
         }
     }
@@ -91,7 +149,6 @@ void waitAlllPlayers(std::string &sessionName)
             session.curPlayerIndex = state;
         }
     }
-    // sem_close(joinSem);
 }
 
 int main(int argc, char const *argv[])

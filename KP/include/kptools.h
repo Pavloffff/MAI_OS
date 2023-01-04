@@ -36,7 +36,7 @@ namespace gametools
         std::string name;
         int bulls;
         int cows;
-        unsigned int ans;
+        std::string ans;
         bool operator<(const Player& x);
         friend std::ostream& operator<<(std::ostream& cout, const Player &p) {
             cout << "name: " << p.name << "\n";
@@ -55,9 +55,9 @@ namespace gametools
         std::string sessionName;
         int _sz;
         unsigned int cntOfPlayers;
-        int curPlayerIndex;
+        int curPlayerIndex = 0;
         std::vector<Player> playerList;
-        int hiddenNum;
+        std::string hiddenNum;
         friend std::ostream& operator<<(std::ostream& cout, const Session &s) {
             cout << "Name of session: " << s.sessionName << "\n";
             cout << "Count of players: " << s.cntOfPlayers << "\n";

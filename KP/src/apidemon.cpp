@@ -57,10 +57,7 @@ int main(int argc, char const *argv[])
                         Session session;
                         session.sessionName = createReply["sessionName"];
                         session.cntOfPlayers = createReply["cntOfPlayers"];
-                        srand(time(NULL));
-                        int answer = 1000 + rand() % (9999 - 1000 + 1);
-                        session.hiddenNum = answer;
-                        createReply["hiddenNum"] = session.hiddenNum;
+                        session.hiddenNum = createReply["hiddenNum"];
                         session.playerList.push_back(player);
                         sessions.insert({session.sessionName, session});
                         for (auto i: sessions) {
@@ -110,10 +107,7 @@ int main(int argc, char const *argv[])
                 } else if (createReply["type"] == "find") {
                     
                 }
-                // Player player;
-                
             } else {
-                // std::cout << state << std::endl;
                 sem_post(mainSem);
                 continue;
             }

@@ -15,14 +15,27 @@
 #include <algorithm>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <set>
+#include <iterator>
+#include <random>
+#include <sstream>
 
 using namespace gametools;
 
+std::string randomNumber()
+{
+    static std::vector<int> v = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    static std::random_device rd;
+    static std::mt19937 generator(rd());
+    std::shuffle(v.begin(), v.end(), generator);
+    std::ostringstream oss;
+    std::copy(v.begin(), v.begin() + 4, std::ostream_iterator<int>(oss, ""));
+    return oss.str();
+}
+
 void client(std::string &playerName, std::string &sessionName, int state, int cnt)
-{ 
-    std::cout << playerName << " " << sessionName << " " << state << " " << cnt << std::endl;
+{
     std::string apiSemName = sessionName + "api.semaphore";
-    std::cout << apiSemName << "\n";
     sem_t *apiSem = sem_open(apiSemName.c_str(), O_CREAT, accessPerm, 0);
     
     semSetvalue(apiSem, cnt);
@@ -32,15 +45,12 @@ void client(std::string &playerName, std::string &sessionName, int state, int cn
     if (state > 1) {
         while (apiState != state) {
             sem_getvalue(apiSem, &apiState);
-            // std::cout << apiState << " " << state << "\n";
         }
     }
     sem_getvalue(apiSem, &apiState);
-    std::cout << apiState << "\n";
     sem_close(apiSem);
     std::string gameSemName = sessionName + "game.semaphore";
     sem_t *gameSem;
-    std::cout << playerName << " " << sessionName << " " << state << " " << cnt << std::endl;
     if (state == 1) {
         sem_unlink(gameSemName.c_str());
         gameSem = sem_open(gameSemName.c_str(), O_CREAT, accessPerm, 0);
@@ -54,39 +64,46 @@ void client(std::string &playerName, std::string &sessionName, int state, int cn
         sem_getvalue(gameSem, &apiState);
         if (apiState % (cnt + 1) == state) {
             int gameFd = shm_open((sessionName + "game.back").c_str(), O_RDWR | O_CREAT, accessPerm);
-            char *mapped;
-            if (firstIt == 0) {
-                struct stat statBuf;
-                fstat(gameFd, &statBuf);
-                int sz = statBuf.st_size;
-                ftruncate(gameFd, sz);
-                mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
-                nlohmann::json reply;
-                std::string strToJson = mapped;
-                reply = nlohmann::json::parse(strToJson);
-                cntOfBulls = reply["bulls"];
-                cntOfCows = reply["cows"];
-                std::cout << "Bulls: " << cntOfBulls << std::endl;
-                std::cout << "Cows: " << cntOfCows << std::endl;
-                munmap(mapped, sz);
-            } else {
-                firstIt = 0;
+            struct stat statBuf;
+            fstat(gameFd, &statBuf);
+            int sz = statBuf.st_size;
+            ftruncate(gameFd, sz);
+            char *mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
+            std::string strToJson = mapped;
+            nlohmann::json request = nlohmann::json::parse(strToJson);
+            if (request.contains("winner")) {
+                std::cout << "Game over. Winner is " << request["winner"] << std::endl;
+                sem_post(gameSem);
+                flag = 0;
+                break;
             }
-            int answer = 0;
-            std::cout << "Input number between 1000 and 9999: ";
+            std::string ansField = playerName + "ans";
+            std::string bullsField = playerName + "bulls";
+            std::string cowsField = playerName + "cows";
+            std::cout << "statistic of player " << playerName << ":" << std::endl;
+            std::cout << "for answer: " << request[ansField] << std::endl;
+            std::cout << "count of bulls: " << request[bullsField] << std::endl;
+            std::cout << "count of cows: " << request[cowsField] << std::endl;
+            std::string answer;
+            std::cout << "Input number length of 4 with different digits: ";
             std::cin >> answer;
-            if (answer > 999 && answer < 10000) {
-                std::cout << std::endl;
+            if (answer.length() == 4) {
+                std::set<char> s;
+                for (int i = 0; i < 4; i++) {
+                    s.insert(answer[i]);
+                }
+                if (s.size() != 4) {
+                    std::cout << "\nWrong number. Try again" << std::endl;
+                    continue;    
+                }
             } else {
                 std::cout << "\nWrong number. Try again" << std::endl;
                 continue;
             }
-            nlohmann::json request;
-            request["name"] = playerName;
-            request["ans"] = answer;
+            request[ansField] = answer;
             std::string strFromJson = request.dump();
             char *buffer = (char *) strFromJson.c_str();
-            int sz = strlen(buffer) + 1;
+            sz = strlen(buffer) + 1;
             ftruncate(gameFd, sz);
             mapped = (char *) mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_SHARED, gameFd, 0);
             memset(mapped, '\0', sz);
@@ -98,7 +115,7 @@ void client(std::string &playerName, std::string &sessionName, int state, int cn
     }
 }
 
-void createSession(std::string &playerName, std::string &sessionName, int cntOfPlayers)
+int createSession(std::string &playerName, std::string &sessionName, int cntOfPlayers)
 {
     int state2 = 0;
     nlohmann::json createRequest;
@@ -106,12 +123,10 @@ void createSession(std::string &playerName, std::string &sessionName, int cntOfP
     createRequest["name"] = playerName;
     createRequest["bulls"] = 0;
     createRequest["cows"] = 0;
-    createRequest["ans"] = 0;
+    createRequest["ans"] = "0000";
     createRequest["sessionName"] = sessionName;
     createRequest["cntOfPlayers"] = cntOfPlayers;
-    srand(time(NULL));
-    int answer = 1000 + rand() % (9999 - 1000 + 1);
-    createRequest["hiddenNum"] = answer;
+    createRequest["hiddenNum"] = randomNumber();
     sem_t *mainSem = sem_open(mainSemName.c_str(), O_CREAT, accessPerm, 0);
     int state = 0;
     while (state != 1) {
@@ -144,13 +159,13 @@ void createSession(std::string &playerName, std::string &sessionName, int cntOfP
     if (reply["check"] == "ok") {
         std::cout << "Session " << sessionName << " created" << std::endl; 
         state2 = reply["state"];
+        sem_wait(mainSem);
+        return 0;
     } else {
         std::cout << "Fail: name " << sessionName << " is already exists" << std::endl;
+        sem_wait(mainSem);
+        return 1;
     }
-    sem_wait(mainSem);
-    // if (reply["check"] == "ok") {
-    //     client(playerName, sessionName, state2, cntOfPlayers);
-    // }
 }
 
 void joinSession(std::string &playerName, std::string &sessionName)
@@ -160,7 +175,7 @@ void joinSession(std::string &playerName, std::string &sessionName)
     joinRequest["name"] = playerName;
     joinRequest["bulls"] = 0;
     joinRequest["cows"] = 0;
-    joinRequest["ans"] = 0;
+    joinRequest["ans"] = "0000";
     joinRequest["sessionName"] = sessionName;
     sem_t *mainSem = sem_open(mainSemName.c_str(), O_CREAT, accessPerm, 0);
     int state = 0;
@@ -234,8 +249,10 @@ int main(int argc, char const *argv[])
             if (cntOfPlayers < 2) {
                 std::cout << "Error: count of players must be greater then 1\n";
             }
-            createSession(playerName, name, cntOfPlayers);
-            joinSession(playerName, name);
+            int c = createSession(playerName, name, cntOfPlayers);
+            if (c == 0) {
+                joinSession(playerName, name);
+            }
             flag = 0;
         } else if (command == "join") {
             std::string name;
