@@ -37,7 +37,6 @@ void client(std::string &playerName, std::string &sessionName, int state, int cn
 {
     std::string apiSemName = sessionName + "api.semaphore";
     sem_t *apiSem = sem_open(apiSemName.c_str(), O_CREAT, accessPerm, 0);
-    
     semSetvalue(apiSem, cnt);
     int apiState = 0;
     sem_getvalue(apiSem, &apiState);
@@ -218,7 +217,7 @@ void joinSession(std::string &playerName, std::string &sessionName)
     }
 }
 
-void findSession(std::string &playerName)
+std::string findSession(std::string &playerName)
 {
     nlohmann::json findRequest;
     findRequest["type"] = "find";
@@ -267,7 +266,9 @@ void findSession(std::string &playerName)
     }
     sem_wait(mainSem);
     if (reply["check"] == "ok") {
-        client(playerName, sessionName, state2, cnt);
+        return reply["sessionName"];
+    } else {
+        return "";
     }
 }
 
@@ -305,7 +306,10 @@ int main(int argc, char const *argv[])
             joinSession(playerName, name);
             flag = 0;
         } else if (command == "find") {
-            findSession(playerName);
+            std::string sessionName = findSession(playerName);
+            if (sessionName != "") {
+                joinSession(playerName, sessionName);
+            }
             flag = 0;
         } else {
             std::cout << "Wrong command!\n"; 
