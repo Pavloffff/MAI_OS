@@ -19,7 +19,7 @@ int main(int argc, char const *argv[])
 {
     int demonPid = fork();
     if (demonPid == 0) {
-        execl("./demon", "./demon", NULL);
+        execl("./apidemon", "./apidemon", NULL);
         return 0;
     } else {
         demonSocket.setsockopt(ZMQ_RCVTIMEO, WAIT_TIME);

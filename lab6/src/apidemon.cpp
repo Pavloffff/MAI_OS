@@ -12,11 +12,8 @@
 
 using namespace advancedZMQ;
 
-//APIDEMON
-
 zmq::context_t context;
 zmq::socket_t socket(context, zmq::socket_type::pair);
-
 zmq::socket_t demonSocket(context, zmq::socket_type::pair);
 
 NTree nodes;

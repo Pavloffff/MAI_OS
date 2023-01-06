@@ -1,5 +1,0 @@
-    PID TTY          TIME CMD
-   3276 tty2     00:00:22 Xorg
-   3369 tty2     00:00:00 gnome-session-b
-   8022 pts/0    00:00:00 make.sh
-   8044 pts/0    00:00:00 ps

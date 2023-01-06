@@ -8,17 +8,6 @@
 #include <zmq.hpp>
 #include <nlohmann/json.hpp>
 
-#define CHECK_ERROR(expr, err, message) \
-    do { \
-        auto __result = (expr); \
-        if (__result == err) { \
-            fprintf(stderr, "Error: %s\n", message); \
-            fprintf(stderr, "errno = %s, file %s, line %d\n", strerror(errno), \
-                    __FILE__, __LINE__); \
-            exit(-1); \
-        } \
-    } while (0)
-
 const int WAIT_TIME = 1000;
 const int PORT = 7000;
 const int DEMON_PORT = 6900;
